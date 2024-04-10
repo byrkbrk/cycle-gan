@@ -59,14 +59,14 @@ class CycleGAN(nn.Module):
 
     def unzip_dataset(self, dataset_name, file_dir):
         if dataset_name == "horse2zebra":
-            zip_file_path = os.path.join(file_dir, "datasets", "horse2zebra.zip")
             extract_to = os.path.join(file_dir, "datasets", dataset_name)
             if os.path.exists(extract_to):
                 print(f"Directory {extract_to} already exists. No operation done")
             else:
                 os.mkdir(extract_to)
-                with ZipFile(zip_file_path, "r") as zip_file:
-                    zip_file.extractall(extract_to)
+                for file_name in ["horse2zebraA.zip", "horse2zebraB.zip"]:
+                    with ZipFile(os.path.join(file_dir, "datasets", file_name), "r") as zip_file:
+                        zip_file.extractall(extract_to)
 
         
 
