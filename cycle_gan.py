@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from models import UNet, Discriminator
 import os
+from zipfile import ZipFile
 
 
 
@@ -55,6 +56,17 @@ class CycleGAN(nn.Module):
         transform, target_transform = transforms
         if dataset_name == "horse2zebra":
             pass
+
+    def unzip_dataset(self, dataset_name, file_dir):
+        if dataset_name == "horse2zebra":
+            zip_file_path = os.path.join(file_dir, "datasets", "horse2zebra.zip")
+            extract_to = os.path.join(file_dir, "datasets", dataset_name)
+            if os.path.exists(extract_to):
+                print(f"Directory {extract_to} already exists. No operation done")
+            else:
+                os.mkdir(extract_to)
+                with ZipFile(zip_file_path, "r") as zip_file:
+                    zip_file.extractall(extract_to)
 
         
 
