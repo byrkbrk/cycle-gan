@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
+from torchvision import transforms
+from torch.utils.data import DataLoader
 from models import UNet, Discriminator
+from utils import Horse2zebraDataset
 import os
 from zipfile import ZipFile
 
@@ -18,7 +21,11 @@ class CycleGAN(nn.Module):
 
     
     def train(self, n_epochs, batch_size, lr, checkpoint_name):
-        pass
+        dataloader = DataLoader(self.instantiate_dataset(self.dataset_name, self.get_transform(self.dataset_name), self.file_dir), 
+                                batch_size, True)
+        disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
+        disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
+
 
     def generate(self, n_samples, checkpoint_name):
         pass
@@ -52,10 +59,10 @@ class CycleGAN(nn.Module):
             disc.load_state_dict(checkpoint[disc_name])
         return disc
     
-    def instantiate_dataset(self, dataset_name, transforms, file_dir, train=True):
-        transform, target_transform = transforms
+    def instantiate_dataset(self, dataset_name, transform, file_dir, train=True):
+        """Instantiate dataset for given dataset name"""
         if dataset_name == "horse2zebra":
-            pass
+            return Horse2zebraDataset(os.path.join(file_dir, "datasets", dataset_name), transform, train)
 
     def unzip_dataset(self, dataset_name, file_dir):
         if dataset_name == "horse2zebra":
@@ -68,5 +75,9 @@ class CycleGAN(nn.Module):
                     with ZipFile(os.path.join(file_dir, "datasets", file_name), "r") as zip_file:
                         zip_file.extractall(extract_to)
 
-        
+    def get_transform(self, dataset_name):
+        """Returns the transform object for a given dataset name"""
+        if dataset_name == "horse2zebra":
+            return transforms.Compose([transforms.ToTensor(), lambda x: 2*x - 1])
+
 
