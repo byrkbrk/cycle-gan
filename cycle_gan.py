@@ -152,7 +152,7 @@ class CycleGAN(nn.Module):
         id_loss_AB = self.get_id_loss(gen_AB, realB, id_criterion, lambda_id)
         cycle_loss_AB = self.get_cycle_loss(gen_AB, fakeB, realA, cycle_criterion, lambda_cycle)
         adv_loss_AB = self.get_adv_loss(fakeB, disc_B, adv_criterion)
-        gen_loss_AB = id_loss_AB % cycle_loss_AB + adv_loss_AB
+        gen_loss_AB = id_loss_AB + cycle_loss_AB + adv_loss_AB
 
         # Generator BA loss
         id_loss_BA = self.get_id_loss(gen_BA, realA, id_criterion, lambda_id)
