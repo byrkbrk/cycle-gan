@@ -112,7 +112,9 @@ class CycleGAN(nn.Module):
     def get_transform(self, dataset_name):
         """Returns the transform object for a given dataset name"""
         if dataset_name == "horse2zebra":
-            return transforms.Compose([transforms.ToTensor(), lambda x: 2*x - 1])
+            return transforms.Compose([transforms.ToTensor(), 
+                                       lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
+                                       lambda x: 2*x - 1]) # pixels to [-0.5, 0.5]
 
     def initialize_disc_optimizer(self, disc_A, disc_B, lr, checkpoint_name, file_dir, device):
         """Initializes discriminator optimizer"""
