@@ -49,7 +49,7 @@ class CycleGAN(nn.Module):
                 # update generator
                 gen_optimizer.zero_grad()
                 gen_loss = self.get_gen_loss(self.gen_AB, self.gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB,
-                                             criterion, criterion, criterion, lambda_id, lambda_cycle)
+                                             criterion, criterion, criterion, lambda_id, lambda_cycle, )
                 gen_loss.backward()
                 gen_optimizer.step()
 
@@ -95,6 +95,7 @@ class CycleGAN(nn.Module):
     def instantiate_dataset(self, dataset_name, transform, file_dir, train=True):
         """Instantiate dataset for given dataset name"""
         if dataset_name == "horse2zebra":
+            self.unzip_dataset(dataset_name, file_dir)
             return Horse2zebraDataset(os.path.join(file_dir, "datasets", dataset_name), transform, train)
 
     def unzip_dataset(self, dataset_name, file_dir):
@@ -126,7 +127,7 @@ class CycleGAN(nn.Module):
     
     def initialize_gen_optimizer(self, gen_AB, gen_BA, lr, checkpoint_name, file_dir, device):
         """Initializes generator optimizer"""
-        gen_optimizer = optim.Adam(list(gen_AB.parameters()) + list(gen_BA.parameters), lr)
+        gen_optimizer = optim.Adam(list(gen_AB.parameters()) + list(gen_BA.parameters()), lr)
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint), device)
             gen_optimizer.load_state_dict(checkpoint["gen_optimizer_state_dict"])
@@ -141,7 +142,7 @@ class CycleGAN(nn.Module):
     def get_disc_X_loss(self, disc_X, realX, fakeX, criterion):
         """Returns discriminator X loss"""
         pred_real = disc_X(realX)
-        pred_fake = disc_X(fakeX)
+        pred_fake = disc_X(fakeX.detach())
         return 1/2*(criterion(pred_real, torch.ones_like(pred_real)) + criterion(pred_fake, torch.zeros_like(pred_fake)))
     
     def get_gen_loss(self, gen_AB, gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB, 
@@ -149,7 +150,7 @@ class CycleGAN(nn.Module):
         """Returns generator loss"""
         # Generator_AB loss
         id_loss_AB = self.get_id_loss(gen_AB, realB, id_criterion, lambda_id)
-        cycle_loss_AB = self.get_cycle_loss(gen_AB, fakeB, realA, cycle_criterion)
+        cycle_loss_AB = self.get_cycle_loss(gen_AB, fakeB, realA, cycle_criterion, lambda_cycle)
         adv_loss_AB = self.get_adv_loss(fakeB, disc_B, adv_criterion)
         gen_loss_AB = id_loss_AB % cycle_loss_AB + adv_loss_AB
 
@@ -194,3 +195,8 @@ class CycleGAN(nn.Module):
         for dir_name in dir_names:
             os.makedirs(os.path.join(file_dir, dir_name), exist_ok=True)
 
+
+
+if __name__ == "__main__":
+    cycle_gan = CycleGAN(None, "horse2zebra", "mps")
+    cycle_gan.train(5, 1, 2e-4)
