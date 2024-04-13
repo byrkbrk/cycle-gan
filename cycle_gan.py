@@ -25,7 +25,7 @@ class CycleGAN(nn.Module):
     
     def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10):
         dataloader = DataLoader(self.instantiate_dataset(self.dataset_name, self.get_transform(self.dataset_name), self.file_dir), 
-                                batch_size, True)
+                                batch_size, True, drop_last=True)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
@@ -148,18 +148,14 @@ class CycleGAN(nn.Module):
     def get_gen_loss(self, gen_AB, gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB, 
                      id_criterion, cycle_criterion, adv_criterion, lambda_id, lambda_cycle):
         """Returns generator loss"""
-        # Generator_AB loss
         id_loss_AB = self.get_id_loss(gen_AB, realB, id_criterion, lambda_id)
-        cycle_loss_AB = self.get_cycle_loss(gen_AB, fakeB, realA, cycle_criterion, lambda_cycle)
+        cycle_loss_A = self.get_cycle_loss(gen_BA, fakeB, realA, cycle_criterion, lambda_cycle)
         adv_loss_AB = self.get_adv_loss(fakeB, disc_B, adv_criterion)
-        gen_loss_AB = id_loss_AB + cycle_loss_AB + adv_loss_AB
 
-        # Generator BA loss
         id_loss_BA = self.get_id_loss(gen_BA, realA, id_criterion, lambda_id)
-        cycle_loss_BA = self.get_cycle_loss(gen_BA, fakeB, realA, cycle_criterion, lambda_cycle)
+        cycle_loss_B = self.get_cycle_loss(gen_AB, fakeA, realB, cycle_criterion, lambda_cycle)
         adv_loss_BA = self.get_adv_loss(fakeA, disc_A, adv_criterion)
-        gen_loss_BA = id_loss_BA + cycle_loss_BA + adv_loss_BA
-        return 1/2*(gen_loss_AB + gen_loss_BA)
+        return id_loss_AB + cycle_loss_A + adv_loss_AB + id_loss_BA + cycle_loss_B + adv_loss_BA
 
     def get_id_loss(self, gen_XY, realY, criterion, lambda_id):
         """Returns identity loss"""
