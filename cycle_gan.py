@@ -185,8 +185,8 @@ class CycleGAN(nn.Module):
     
     def save_tensor_images(self, realA, fakeA, realB, fakeB, epoch, file_dir):
         """Save given tensor images into saved-images directory"""
-        save_image([realA, fakeA, realB, fakeB], 
-                   os.path.join(file_dir, "saved_images", f"realA_fakeA_realB_fakeB_{epoch}.jpeg"), 
+        save_image(torch.cat([realA, fakeB, realB, fakeA], axis=0), 
+                   os.path.join(file_dir, "saved-images", f"realA_fakeB_realB_fakeA_{epoch}.jpeg"), 
                    nrow=len(realA))
 
     def create_dirs(self, file_dir):
