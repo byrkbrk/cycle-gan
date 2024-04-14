@@ -24,8 +24,7 @@ class CycleGAN(nn.Module):
         self.create_dirs(self.file_dir)
     
     def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10):
-        dataloader = DataLoader(self.instantiate_dataset(self.dataset_name, self.get_transform(self.dataset_name), self.file_dir), 
-                                batch_size, True, drop_last=True)
+        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
@@ -190,6 +189,19 @@ class CycleGAN(nn.Module):
         dir_names = ["checkpoints", "saved-images"]
         for dir_name in dir_names:
             os.makedirs(os.path.join(file_dir, dir_name), exist_ok=True)
+
+    def instantiate_dataloader(self, batch_size, dataset_name, checkpoint_name, file_dir):
+        """Returns dataloader for given dataset name"""
+        if checkpoint_name:
+            batch_size = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name),
+                                    torch.device("cpu"))["batch_size"]
+        dataset = self.instantiate_dataset(dataset_name, self.get_transform(dataset_name), file_dir)
+        return DataLoader(dataset, batch_size, True, drop_last=True)
+    
+    def save_checkpoint(self):
+        pass
+            
+
 
 
 
