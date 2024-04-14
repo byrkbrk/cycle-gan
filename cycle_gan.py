@@ -57,7 +57,7 @@ class CycleGAN(nn.Module):
                 avg_gen_loss += gen_loss.item()/len(dataloader)
             print(f"Epoch: {epoch}, Discriminator loss: {avg_disc_loss}, Generator loss {avg_gen_loss}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir)
-            if epoch + 1 % checkpoint_save_freq == 0:
+            if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
                                      epoch, batch_size, self.dataset_name, avg_gen_loss, avg_disc_loss, self.device, 
                                      self.file_dir, checkpoint_save_dir)
