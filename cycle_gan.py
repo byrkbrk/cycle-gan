@@ -74,7 +74,7 @@ class CycleGAN(nn.Module):
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
-            gen = UNet(3, 256, 256, 32).to(device)
+            gen = UNet(3, 256, 256, 32, n_downs=3).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -84,7 +84,7 @@ class CycleGAN(nn.Module):
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
         if dataset_name == "horse2zebra":
-            disc = Discriminator(3, 32).to(device)
+            disc = Discriminator(3, 32, n_downs=3).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
