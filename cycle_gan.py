@@ -13,18 +13,18 @@ from tqdm import tqdm
 
 
 class CycleGAN(nn.Module):
-    def __init__(self, checkpoint_name=None, dataset_name=None, device="cuda"):
+    def __init__(self, checkpoint_name=None, dataset_name=None, device=None):
         super(CycleGAN, self).__init__()
         self.checkpoint_name = checkpoint_name
         self.file_dir = os.path.dirname(__file__)
         self.dataset_name = self.get_dataset_name(dataset_name, checkpoint_name, self.file_dir)
-        self.device = torch.device(device)
+        self.device = self.initialize_device(device)
         self.gen_AB = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_AB")
         self.gen_BA = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_BA")
         self.create_dirs(self.file_dir)
     
-    def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10):
-        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir)
+    def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10, checkpoint_save_dir=None, checkpoint_save_freq=1):
+        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=False)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
@@ -32,7 +32,8 @@ class CycleGAN(nn.Module):
         criterion = self.instantiate_criterion(criterion_name)
 
         avg_disc_loss = avg_gen_loss = 0
-        for epoch in range(n_epochs):
+        for epoch in range(self.get_start_epoch(self.checkpoint_name, self.file_dir), 
+                           self.get_start_epoch(self.checkpoint_name, self.file_dir) + n_epochs):
             for realA, realB in tqdm(dataloader, desc=f"Epoch {epoch}"):
                 realA = realA.to(self.device)
                 realB = realB.to(self.device)
@@ -56,8 +57,12 @@ class CycleGAN(nn.Module):
                 avg_gen_loss += gen_loss.item()/len(dataloader)
             print(f"Epoch: {epoch}, Discriminator loss: {avg_disc_loss}, Generator loss {avg_gen_loss}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir)
+            if epoch + 1 % checkpoint_save_freq == 0:
+                self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
+                                     epoch, batch_size, self.dataset_name, avg_gen_loss, avg_disc_loss, self.device, 
+                                     self.file_dir, checkpoint_save_dir)
             avg_disc_loss = avg_gen_loss = 0
-            
+
 
     def generate(self, n_samples, checkpoint_name):
         pass
@@ -78,7 +83,7 @@ class CycleGAN(nn.Module):
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
-            gen.load_state_dict(checkpoint[gen_name])
+            gen.load_state_dict(checkpoint[f"{gen_name}_state_dict"])
         return gen
     
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
@@ -88,7 +93,7 @@ class CycleGAN(nn.Module):
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
-            disc.load_state_dict(checkpoint[disc_name])
+            disc.load_state_dict(checkpoint[f"{disc_name}_state_dict"])
         return disc
     
     def instantiate_dataset(self, dataset_name, transform, file_dir, train=True):
@@ -128,7 +133,7 @@ class CycleGAN(nn.Module):
         """Initializes generator optimizer"""
         gen_optimizer = optim.Adam(list(gen_AB.parameters()) + list(gen_BA.parameters()), lr)
         if checkpoint_name:
-            checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint), device)
+            checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), device)
             gen_optimizer.load_state_dict(checkpoint["gen_optimizer_state_dict"])
         return gen_optimizer
                 
@@ -190,21 +195,57 @@ class CycleGAN(nn.Module):
         for dir_name in dir_names:
             os.makedirs(os.path.join(file_dir, dir_name), exist_ok=True)
 
-    def instantiate_dataloader(self, batch_size, dataset_name, checkpoint_name, file_dir):
+    def instantiate_dataloader(self, batch_size, dataset_name, checkpoint_name, file_dir, use_train_set=True):
         """Returns dataloader for given dataset name"""
         if checkpoint_name:
             batch_size = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name),
                                     torch.device("cpu"))["batch_size"]
-        dataset = self.instantiate_dataset(dataset_name, self.get_transform(dataset_name), file_dir)
+        dataset = self.instantiate_dataset(dataset_name, self.get_transform(dataset_name), file_dir, use_train_set)
         return DataLoader(dataset, batch_size, True, drop_last=True)
     
-    def save_checkpoint(self):
-        pass
-            
+    def save_checkpoint(self, gen_AB, gen_BA, gen_optimzer, disc_A, disc_B, disc_optimizer,
+                        epoch, batch_size, dataset_name, gen_loss, disc_loss, device, file_dir, save_dir=None):
+        """Saves checkpoint for given variables"""
+        checkpoint = {
+            "gen_AB_state_dict": gen_AB.state_dict(),
+            "gen_BA_state_dict": gen_BA.state_dict(),
+            "gen_optimizer_state_dict": gen_optimzer.state_dict(),
+            "disc_A_state_dict": disc_A.state_dict(),
+            "disc_B_state_dict": disc_B.state_dict(),
+            "disc_optimizer_state_dict": disc_optimizer.state_dict(),
+            "epoch": epoch,
+            "batch_size": batch_size,
+            "dataset_name": dataset_name,
+            "gen_loss": gen_loss,
+            "disc_loss": disc_loss,
+            "device": device
+        }
 
-
-
+        if save_dir: 
+            fpath = os.path.join(save_dir, f"{dataset_name}_checkpoint_{epoch}.pth")
+        else: 
+            fpath = os.path.join(file_dir, "checkpoints", f"{dataset_name}_checkpoint_{epoch}.pth")
+        torch.save(checkpoint, fpath)            
+    
+    def initialize_device(self, device):
+        if device is None:
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif torch.backends.mps.is_available():
+                device = "mps"
+            else:
+                device = "cpu"
+        return torch.device(device)
+    
+    def get_start_epoch(self, checkpoint_name, file_dir):
+        start_epoch = 0
+        if checkpoint_name:
+            start_epoch = torch.load(
+                os.path.join(file_dir, "checkpoints", checkpoint_name), 
+                map_location=torch.device("cpu"))["epoch"] + 1
+        return start_epoch
 
 if __name__ == "__main__":
-    cycle_gan = CycleGAN(None, "horse2zebra", "mps")
-    cycle_gan.train(5, 4, 2e-4)
+    checkpoint_name = "horse2zebra_checkpoint_0.pth"
+    cycle_gan = CycleGAN(checkpoint_name, "horse2zebra")
+    cycle_gan.train(5, 2, 2e-4)
