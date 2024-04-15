@@ -24,7 +24,7 @@ class CycleGAN(nn.Module):
         self.create_dirs(self.file_dir)
     
     def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10, checkpoint_save_dir=None, checkpoint_save_freq=1):
-        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=False)
+        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=True)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
@@ -79,7 +79,7 @@ class CycleGAN(nn.Module):
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
-            gen = UNet(3, 256, 256, 32, n_downs=3).to(device)
+            gen = UNet(3, 256, 256, 16, n_downs=3).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -89,7 +89,7 @@ class CycleGAN(nn.Module):
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
         if dataset_name == "horse2zebra":
-            disc = Discriminator(3, 32, n_downs=3).to(device)
+            disc = Discriminator(3, 16, n_downs=3).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
