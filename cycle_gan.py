@@ -228,6 +228,7 @@ class CycleGAN(nn.Module):
         torch.save(checkpoint, fpath)            
     
     def initialize_device(self, device):
+        """Initializes device based on device-availability if device info not provided"""
         if device is None:
             if torch.cuda.is_available():
                 device = "cuda"
@@ -244,6 +245,8 @@ class CycleGAN(nn.Module):
                 os.path.join(file_dir, "checkpoints", checkpoint_name), 
                 map_location=torch.device("cpu"))["epoch"] + 1
         return start_epoch
+
+
 
 if __name__ == "__main__":
     checkpoint_name = "horse2zebra_checkpoint_0.pth"
