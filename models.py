@@ -98,7 +98,7 @@ class UNet(nn.Module):
             nn.Conv2d(2*hidden_channels, hidden_channels, 3, 1, 1),
             nn.BatchNorm2d(hidden_channels),
             nn.GELU(),
-            nn.Conv2d(hidden_channels, 3, 1, 1)
+            nn.Conv2d(hidden_channels, in_channels, 1, 1)
         )
 
     def forward(self, x):
