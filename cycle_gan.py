@@ -31,8 +31,8 @@ class CycleGAN(nn.Module):
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
         disc_optimizer = self.initialize_disc_optimizer(disc_A, disc_B, lr, self.checkpoint_name, self.file_dir, self.device)
         criterion = self.instantiate_criterion(criterion_name)
+        loss_dict = self._initialize_loss_dict(self.checkpoint_name, self.file_dir)
 
-        avg_disc_loss = avg_gen_loss = 0
         for epoch in range(self.get_start_epoch(self.checkpoint_name, self.file_dir), 
                            self.get_start_epoch(self.checkpoint_name, self.file_dir) + n_epochs):
             for realA, realB in tqdm(dataloader, desc=f"Epoch {epoch}"):
@@ -43,26 +43,23 @@ class CycleGAN(nn.Module):
 
                 # update discriminator
                 disc_optimizer.zero_grad()
-                disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, fakeA, fakeB, criterion)
+                disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, fakeA, fakeB, criterion, loss_dict)
                 disc_loss.backward()
                 disc_optimizer.step()
 
                 # update generator
                 gen_optimizer.zero_grad()
                 gen_loss = self.get_gen_loss(self.gen_AB, self.gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB,
-                                             criterion, criterion, criterion, lambda_id, lambda_cycle, )
+                                             criterion, criterion, criterion, lambda_id, lambda_cycle, loss_dict)
                 gen_loss.backward()
                 gen_optimizer.step()
-
-                avg_disc_loss += disc_loss.item()/len(dataloader)
-                avg_gen_loss += gen_loss.item()/len(dataloader)
-            print(f"Epoch: {epoch}, Discriminator loss: {avg_disc_loss}, Generator loss {avg_gen_loss}")
+            self._average_temp_loss(loss_dict)
+            print(f"Epoch: {epoch}, Discriminator loss: {loss_dict["Discriminator"]}, Generator loss: {loss_dict["Generator"]}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
-                                     epoch, batch_size, self.dataset_name, avg_gen_loss, avg_disc_loss, self.device, 
+                                     epoch, batch_size, self.dataset_name, loss_dict, self.device, 
                                      self.file_dir, checkpoint_save_dir)
-            avg_disc_loss = avg_gen_loss = 0
 
 
     def generate(self, n_samples, checkpoint_name):
@@ -218,7 +215,7 @@ class CycleGAN(nn.Module):
         return DataLoader(dataset, batch_size, True, drop_last=True)
     
     def save_checkpoint(self, gen_AB, gen_BA, gen_optimzer, disc_A, disc_B, disc_optimizer,
-                        epoch, batch_size, dataset_name, gen_loss, disc_loss, device, file_dir, save_dir=None):
+                        epoch, batch_size, dataset_name, loss_dict, device, file_dir, save_dir=None):
         """Saves checkpoint for given variables"""
         checkpoint = {
             "gen_AB_state_dict": gen_AB.state_dict(),
@@ -230,8 +227,7 @@ class CycleGAN(nn.Module):
             "epoch": epoch,
             "batch_size": batch_size,
             "dataset_name": dataset_name,
-            "gen_loss": gen_loss,
-            "disc_loss": disc_loss,
+            "loss_dict": loss_dict,
             "device": device
         }
 
