@@ -273,6 +273,14 @@ class CycleGAN(nn.Module):
             loss_dict = {key: [] for key in keys}
             for key in loss_dict.keys(): loss_dict["temp-" + key] = []
         return loss_dict
+    
+    def _average_temp_loss(self, loss_dict):
+        """Averages temporary losses and append relavent loss in loss dict"""
+        pat = "temp-"
+        for loss_name in loss_dict.keys():
+            if pat in loss_name:
+                loss_dict[loss_name[len(pat):]].append(sum(loss_dict[loss_name]) / len(loss_dict[loss_name]))
+                loss_dict[loss_name] = []
 
 
 
