@@ -140,11 +140,16 @@ class CycleGAN(nn.Module):
             gen_optimizer.load_state_dict(checkpoint["gen_optimizer_state_dict"])
         return gen_optimizer
                 
-    def get_disc_loss(self, disc_A, disc_B, realA, realB, fakeA, fakeB, criterion):
+    def get_disc_loss(self, disc_A, disc_B, realA, realB, fakeA, fakeB, criterion, loss_dict):
         """Returns discriminator loss"""
         disc_loss_A = self.get_disc_X_loss(disc_A, realA, fakeA, criterion)
         disc_loss_B = self.get_disc_X_loss(disc_B, realB, fakeB, criterion)
-        return disc_loss_A + disc_loss_B
+        disc_loss = disc_loss_A + disc_loss_B
+        
+        for key, loss_val in zip(["Discriminator-A", "Discriminator-B", "Discriminator"], 
+                                 [disc_loss_A.item(), disc_loss_B.item(), disc_loss.item()]):
+            loss_dict["temp-" + key].append(loss_val)
+        return disc_loss
     
     def get_disc_X_loss(self, disc_X, realX, fakeX, criterion):
         """Returns discriminator X loss"""
@@ -153,16 +158,22 @@ class CycleGAN(nn.Module):
         return 1/2*(criterion(pred_real, torch.ones_like(pred_real)) + criterion(pred_fake, torch.zeros_like(pred_fake)))
     
     def get_gen_loss(self, gen_AB, gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB, 
-                     id_criterion, cycle_criterion, adv_criterion, lambda_id, lambda_cycle):
+                     id_criterion, cycle_criterion, adv_criterion, lambda_id, lambda_cycle, loss_dict):
         """Returns generator loss"""
         id_loss_AB = self.get_id_loss(gen_AB, realB, id_criterion, lambda_id)
         cycle_loss_A = self.get_cycle_loss(gen_BA, fakeB, realA, cycle_criterion, lambda_cycle)
         adv_loss_AB = self.get_adv_loss(fakeB, disc_B, adv_criterion)
-
         id_loss_BA = self.get_id_loss(gen_BA, realA, id_criterion, lambda_id)
         cycle_loss_B = self.get_cycle_loss(gen_AB, fakeA, realB, cycle_criterion, lambda_cycle)
         adv_loss_BA = self.get_adv_loss(fakeA, disc_A, adv_criterion)
-        return id_loss_AB + cycle_loss_A + adv_loss_AB + id_loss_BA + cycle_loss_B + adv_loss_BA
+        gen_loss = id_loss_AB + cycle_loss_A + adv_loss_AB + id_loss_BA + cycle_loss_B + adv_loss_BA
+        
+        for key, loss_val in zip(["GenAB-identity", "cycle-A", "GenAB-adversarial", 
+                              "GenBA-identity", "cycle-B", "GenBA-adversarial", "Generator"],
+                              [id_loss_AB.item(), cycle_loss_A.item(), adv_loss_AB.item(),
+                               id_loss_BA.item(), cycle_loss_B.item(), adv_loss_BA.item(), gen_loss.item()]):
+            loss_dict["temp-" + key].append(loss_val)
+        return gen_loss
 
     def get_id_loss(self, gen_XY, realY, criterion, lambda_id):
         """Returns identity loss"""
@@ -242,12 +253,26 @@ class CycleGAN(nn.Module):
         return torch.device(device)
     
     def get_start_epoch(self, checkpoint_name, file_dir):
+        """Returns starting epoch for training"""
         start_epoch = 0
         if checkpoint_name:
             start_epoch = torch.load(
                 os.path.join(file_dir, "checkpoints", checkpoint_name), 
                 map_location=torch.device("cpu"))["epoch"] + 1
         return start_epoch
+    
+    def _initialize_loss_dict(self, checkpoint_name, file_dir):
+        """Returns loss dictionary"""
+        if checkpoint_name:
+            loss_dict = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), torch.device("cpu"))["loss_dict"]
+        else:
+            keys = ["GenAB-adversarial", "cycle-A", "GenAB-identity",
+                    "GenBA-adversarial", "cycle-B", "GenBA-identity",
+                    "Discriminator-A, Discriminator-B",
+                    "Generator", "Discriminator"]
+            loss_dict = {key: [] for key in keys}
+            for key in loss_dict.keys(): loss_dict["temp-" + key] = []
+        return loss_dict
 
 
 
