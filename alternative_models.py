@@ -91,7 +91,7 @@ class Discriminator(nn.Module):
         self.model = nn.Sequential(*layers)
     
     def forward(self, x):
-        return self.model
+        return self.model(x)
 
 
 
@@ -116,6 +116,7 @@ if __name__ == "__main__":
     print(x.shape)
     print(gen(x).shape)
 
+    print("Disc")
     disc = Discriminator(3, 16).to(device)
     print(x.shape)
     print(disc(x).shape)
