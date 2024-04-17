@@ -4,7 +4,8 @@ from torch import optim
 from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
-from models import UNet, Discriminator
+#from models import UNet, Discriminator
+from alternative_models import Generator, Discriminator
 from utils import Horse2zebraDataset
 import os
 from zipfile import ZipFile
@@ -79,7 +80,8 @@ class CycleGAN(nn.Module):
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
-            gen = UNet(3, 256, 256, 16, n_downs=3).to(device)
+            #gen = UNet(3, 256, 256, 16, n_downs=3).to(device)
+            gen = Generator(3, 64).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -89,7 +91,8 @@ class CycleGAN(nn.Module):
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
         if dataset_name == "horse2zebra":
-            disc = Discriminator(3, 16, n_downs=3).to(device)
+            #disc = Discriminator(3, 16, n_downs=3).to(device)
+            disc = Discriminator(3, 64).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
