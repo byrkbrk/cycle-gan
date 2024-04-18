@@ -54,7 +54,7 @@ class CycleGAN(nn.Module):
                 gen_loss.backward()
                 gen_optimizer.step()
             self._average_temp_loss(loss_dict)
-            print(f"Epoch: {epoch}, Discriminator loss: {loss_dict["Discriminator"]}, Generator loss: {loss_dict["Generator"]}")
+            print(f"Epoch: {epoch}, Discriminator loss: {loss_dict['Discriminator'][-1]}, Generator loss: {loss_dict['Generator'][-1]}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
@@ -78,7 +78,7 @@ class CycleGAN(nn.Module):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
             #gen = UNet(3, 256, 256, 16, n_downs=3).to(device)
-            gen = Generator(3, 64).to(device)
+            gen = Generator(3, 32).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -89,7 +89,7 @@ class CycleGAN(nn.Module):
         """Returns initialized discriminator for given inputs"""
         if dataset_name == "horse2zebra":
             #disc = Discriminator(3, 16, n_downs=3).to(device)
-            disc = Discriminator(3, 64).to(device)
+            disc = Discriminator(3, 32).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -142,7 +142,6 @@ class CycleGAN(nn.Module):
         disc_loss_A = self.get_disc_X_loss(disc_A, realA, fakeA, criterion)
         disc_loss_B = self.get_disc_X_loss(disc_B, realB, fakeB, criterion)
         disc_loss = disc_loss_A + disc_loss_B
-        
         for key, loss_val in zip(["Discriminator-A", "Discriminator-B", "Discriminator"], 
                                  [disc_loss_A.item(), disc_loss_B.item(), disc_loss.item()]):
             loss_dict["temp-" + key].append(loss_val)
@@ -177,7 +176,7 @@ class CycleGAN(nn.Module):
         return lambda_id*criterion(gen_XY(realY), realY)
     
     def get_cycle_loss(self, gen_YX, fakeY, realX, criterion, lambda_cycle):
-        """Returns cycle loss"""
+        """Returns cycle consistency loss"""
         return lambda_cycle*criterion(gen_YX(fakeY), realX)
     
     def get_adv_loss(self, fakeY, disc_Y, criterion):
@@ -260,14 +259,17 @@ class CycleGAN(nn.Module):
     def _initialize_loss_dict(self, checkpoint_name, file_dir):
         """Returns loss dictionary"""
         if checkpoint_name:
-            loss_dict = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), torch.device("cpu"))["loss_dict"]
-        else:
-            keys = ["GenAB-adversarial", "cycle-A", "GenAB-identity",
-                    "GenBA-adversarial", "cycle-B", "GenBA-identity",
-                    "Discriminator-A, Discriminator-B",
-                    "Generator", "Discriminator"]
-            loss_dict = {key: [] for key in keys}
-            for key in loss_dict.keys(): loss_dict["temp-" + key] = []
+            try:
+                loss_dict = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), torch.device("cpu"))["loss_dict"]
+                return loss_dict
+            except KeyError:
+                pass
+        keys = ["GenAB-adversarial", "cycle-A", "GenAB-identity",
+                "GenBA-adversarial", "cycle-B", "GenBA-identity",
+                "Discriminator-A", "Discriminator-B",
+                "Generator", "Discriminator"]
+        loss_dict = {key: [] for key in keys}
+        for key in list(loss_dict.keys()): loss_dict["temp-" + key] = []
         return loss_dict
     
     def _average_temp_loss(self, loss_dict):
