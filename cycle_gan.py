@@ -10,6 +10,7 @@ from utils import Horse2zebraDataset
 import os
 from zipfile import ZipFile
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 
@@ -56,6 +57,7 @@ class CycleGAN(nn.Module):
             self._average_temp_loss(loss_dict)
             print(f"Epoch: {epoch}, Discriminator loss: {loss_dict['Discriminator'][-1]}, Generator loss: {loss_dict['Generator'][-1]}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir)
+            self._save_loss_figure(loss_dict, self.dataset_name, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
                                      epoch, batch_size, self.dataset_name, loss_dict, self.device, 
@@ -201,7 +203,7 @@ class CycleGAN(nn.Module):
 
     def create_dirs(self, file_dir):
         """Create directories used in training and inferencing"""
-        dir_names = ["checkpoints", "saved-images"]
+        dir_names = ["checkpoints", "saved-images", "loss-figures"]
         for dir_name in dir_names:
             os.makedirs(os.path.join(file_dir, dir_name), exist_ok=True)
 
@@ -279,6 +281,19 @@ class CycleGAN(nn.Module):
             if pat in loss_name:
                 loss_dict[loss_name[len(pat):]].append(sum(loss_dict[loss_name]) / len(loss_dict[loss_name]))
                 loss_dict[loss_name] = []
+    
+    def _save_loss_figure(self, loss_dict, dataset_name, file_dir):
+        """Creates and saves loss figure for given loss dict"""
+        line_types = ['b-', 'g--', 'r:', 'c-.', 'm-', 'y--', 'k:', 'm-.', 'bx-', 'ro-.']
+        labels = [label for label in loss_dict.keys() if "temp-" not in label]
+        fig, ax = plt.subplots()
+        for label, line_type in zip(labels, line_types):
+            ax.plot(range(len(loss_dict[label])), loss_dict[label], line_type, label=label)
+        ax.legend()
+        ax.set_xlabel("epoch")
+        ax.set_ylabel("loss")
+        fig.savefig(os.path.join(file_dir, "loss-figures", f"{dataset_name}_loss_fig.png"))
+        plt.close(fig)
 
 
 
