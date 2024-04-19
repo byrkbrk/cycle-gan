@@ -205,13 +205,14 @@ class CycleGAN(nn.Module):
         for dir_name in dir_names:
             os.makedirs(os.path.join(file_dir, dir_name), exist_ok=True)
 
-    def instantiate_dataloader(self, batch_size, dataset_name, checkpoint_name, file_dir, use_train_set=True):
+    def instantiate_dataloader(self, batch_size, dataset_name, checkpoint_name, file_dir, use_train_set=True, shuffle=True, drop_last=True):
         """Returns dataloader for given dataset name"""
+        dataset = self.instantiate_dataset(dataset_name, self.get_transform(dataset_name), file_dir, use_train_set)
+
         if checkpoint_name:
             batch_size = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name),
                                     torch.device("cpu"))["batch_size"]
-        dataset = self.instantiate_dataset(dataset_name, self.get_transform(dataset_name), file_dir, use_train_set)
-        return DataLoader(dataset, batch_size, True, drop_last=True)
+        return DataLoader(dataset, batch_size, shuffle=shuffle, drop_last=drop_last)
     
     def save_checkpoint(self, gen_AB, gen_BA, gen_optimzer, disc_A, disc_B, disc_optimizer,
                         epoch, batch_size, dataset_name, loss_dict, device, file_dir, save_dir=None):
