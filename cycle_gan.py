@@ -4,7 +4,6 @@ from torch import optim
 from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
-#from models import UNet, Discriminator
 from alternative_models import Generator, Discriminator
 from utils import Horse2zebraDataset
 import os
@@ -79,8 +78,7 @@ class CycleGAN(nn.Module):
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
-            #gen = UNet(3, 256, 256, 16, n_downs=3).to(device)
-            gen = Generator(3, 32).to(device)
+            gen = Generator(3, 64).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -90,8 +88,7 @@ class CycleGAN(nn.Module):
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
         if dataset_name == "horse2zebra":
-            #disc = Discriminator(3, 16, n_downs=3).to(device)
-            disc = Discriminator(3, 32).to(device)
+            disc = Discriminator(3, 64).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -120,6 +117,7 @@ class CycleGAN(nn.Module):
         """Returns the transform object for a given dataset name"""
         if dataset_name == "horse2zebra":
             return transforms.Compose([transforms.ToTensor(), 
+                                       transforms.RandomHorizontalFlip(),
                                        lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
                                        lambda x: 2*x - 1]) # pixels to [-0.5, 0.5]
 
@@ -166,8 +164,8 @@ class CycleGAN(nn.Module):
         adv_loss_BA = self.get_adv_loss(fakeA, disc_A, adv_criterion)
         gen_loss = id_loss_AB + cycle_loss_A + adv_loss_AB + id_loss_BA + cycle_loss_B + adv_loss_BA
         
-        for key, loss_val in zip(["GenAB-identity", "cycle-A", "GenAB-adversarial", 
-                              "GenBA-identity", "cycle-B", "GenBA-adversarial", "Generator"],
+        for key, loss_val in zip(["GenAB-identity", "Cycle-consistency-A", "GenAB-adversarial", 
+                              "GenBA-identity", "Cycle-consistency-B", "GenBA-adversarial", "Generator"],
                               [id_loss_AB.item(), cycle_loss_A.item(), adv_loss_AB.item(),
                                id_loss_BA.item(), cycle_loss_B.item(), adv_loss_BA.item(), gen_loss.item()]):
             loss_dict["temp-" + key].append(loss_val)
@@ -266,8 +264,8 @@ class CycleGAN(nn.Module):
                 return loss_dict
             except KeyError:
                 pass
-        keys = ["GenAB-adversarial", "cycle-A", "GenAB-identity",
-                "GenBA-adversarial", "cycle-B", "GenBA-identity",
+        keys = ["GenAB-adversarial", "Cycle-consistency-A", "GenAB-identity",
+                "GenBA-adversarial", "Cycle-consistency-B", "GenBA-identity",
                 "Discriminator-A", "Discriminator-B",
                 "Generator", "Discriminator"]
         loss_dict = {key: [] for key in keys}
