@@ -16,9 +16,11 @@ if __name__ == "__main__":
     parser.add_argument("--lambda-cycle", type=float, default=10, help="Hyperparameter for cycle consistency loss")
     parser.add_argument("--checkpoint-save-freq", type=int, default=5, help="Frequency for checkpoint saving")
     parser.add_argument("--checkpoint-save-dir", type=str, default=None, help="Directory to save checkpoints")
+    parser.add_argument("--image-save-dir", type=str, default=None, help="Directory to save images during training")
     args = parser.parse_args()
 
     cycle_gan = CycleGAN(args.checkpoint_name, args.dataset_name, args.device)
     cycle_gan.train(args.n_epochs, args.batch_size, args.lr, args.criterion_name,
-                    args.lambda_id, args.lambda_cycle, args.checkpoint_save_dir, args.checkpoint_save_freq,)
+                    args.lambda_id, args.lambda_cycle, args.checkpoint_save_dir, args.checkpoint_save_freq,
+                    args.image_save_dir)
 
