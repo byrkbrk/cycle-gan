@@ -24,7 +24,8 @@ class CycleGAN(nn.Module):
         self.gen_BA = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_BA")
         self.create_dirs(self.file_dir)
     
-    def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10, checkpoint_save_dir=None, checkpoint_save_freq=1):
+    def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10, 
+              checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None):
         dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=True)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
@@ -55,7 +56,7 @@ class CycleGAN(nn.Module):
                 gen_optimizer.step()
             self._average_temp_loss(loss_dict)
             print(f"Epoch: {epoch}, Discriminator loss: {loss_dict['Discriminator'][-1]}, Generator loss: {loss_dict['Generator'][-1]}")
-            self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir)
+            self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir, image_save_dir)
             self._save_loss_figure(loss_dict, self.dataset_name, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
@@ -204,11 +205,13 @@ class CycleGAN(nn.Module):
         elif criterion_name == "mse":
             return nn.MSELoss()
     
-    def save_tensor_images(self, realA, fakeA, realB, fakeB, epoch, file_dir):
+    def save_tensor_images(self, realA, fakeA, realB, fakeB, epoch, file_dir, image_save_dir):
         """Save given tensor images into saved-images directory"""
-        save_image(torch.cat([realA, fakeB, realB, fakeA], axis=0), 
-                   os.path.join(file_dir, "saved-images", f"realA_fakeB_realB_fakeA_{epoch}.jpeg"), 
-                   nrow=len(realA))
+        if image_save_dir:
+            fp = os.path.join(image_save_dir, f"realA_fakeB_realB_fakeA_{epoch}.jpeg")
+        else:
+            fp = os.path.join(file_dir, "saved-images", f"realA_fakeB_realB_fakeA_{epoch}.jpeg")
+        save_image(torch.cat([realA, fakeB, realB, fakeA], axis=0), fp, nrow=len(realA))
 
     def create_dirs(self, file_dir):
         """Create directories used in training and inferencing"""
