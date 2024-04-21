@@ -72,11 +72,12 @@ class CycleGAN(nn.Module):
         if gen_name == "AB": gen = self.gen_AB
         else: gen = self.gen_BA
         gen.eval()
-
+        inference_transform = lambda x: (x + 1)/2
         for i, (realA, realB) in enumerate(self.instantiate_dataloader(1, self.dataset_name, None, self.file_dir, use_train_set, False, False)):
             if gen_name == "AB": image = realA.to(self.device)
             else: image = realB.to(self.device)
-            save_image(torch.cat([image, gen(image)]), os.path.join(save_dir, f"image_{gen_name}_{i}.jpeg"))
+            save_image(torch.cat([inference_transform(image), inference_transform(gen(image))]), 
+                       os.path.join(save_dir, f"image_{gen_name}_{i}.jpeg"))
 
     def get_dataset_name(self, dataset_name, checkpoint_name, file_dir):
         """Returns dataset name based on if checkpoint-name provided"""
