@@ -24,7 +24,7 @@ class CycleGAN(nn.Module):
         self.gen_BA = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_BA")
         self.create_dirs(self.file_dir)
     
-    def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10, 
+    def train(self, n_epochs, batch_size, lr, id_criterion_name="L1", cycle_criterion_name="L1", adv_criterion_name="mse", lambda_id=0.1, lambda_cycle=10, 
               checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None, buffer_capacity=50):
         dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=True)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
@@ -33,7 +33,9 @@ class CycleGAN(nn.Module):
         disc_optimizer = self.initialize_disc_optimizer(disc_A, disc_B, lr, self.checkpoint_name, self.file_dir, self.device)
         gen_scheduler = self.initialize_scheduler(gen_optimizer, self.checkpoint_name, self.file_dir, self.device, "gen")
         disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc")
-        criterion = self.instantiate_criterion(criterion_name)
+        id_criterion = self.instantiate_criterion(id_criterion_name)
+        cycle_criterion = self.instantiate_criterion(cycle_criterion_name)
+        adv_criterion = self.instantiate_criterion(adv_criterion_name)
         loss_dict = self._initialize_loss_dict(self.checkpoint_name, self.file_dir)
         buffer_fakeA = self.initialize_image_buffer(buffer_capacity, self.device, self.checkpoint_name, self.file_dir, "fakeA")
         buffer_fakeB = self.initialize_image_buffer(buffer_capacity, self.device, self.checkpoint_name, self.file_dir, "fakeB")
@@ -51,14 +53,14 @@ class CycleGAN(nn.Module):
                 # update discriminator
                 disc_optimizer.zero_grad()
                 disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, 
-                                               buffer_fakeA.get_tensor(), buffer_fakeB.get_tensor(), criterion, loss_dict)
+                                               buffer_fakeA.get_tensor(), buffer_fakeB.get_tensor(), adv_criterion, loss_dict)
                 disc_loss.backward()
                 disc_optimizer.step()
 
                 # update generator
                 gen_optimizer.zero_grad()
                 gen_loss = self.get_gen_loss(self.gen_AB, self.gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB,
-                                            criterion, criterion, criterion, lambda_id, lambda_cycle, loss_dict)
+                                            id_criterion, cycle_criterion, adv_criterion, lambda_id, lambda_cycle, loss_dict)
                 gen_loss.backward()
                 gen_optimizer.step()
             gen_scheduler.step()
