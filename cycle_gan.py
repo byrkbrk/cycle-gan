@@ -5,7 +5,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 from alternative_models import Generator, Discriminator
-from utils import Horse2zebraDataset
+from utils import Horse2zebraDataset, ImageBuffer
 import os
 from zipfile import ZipFile
 from tqdm import tqdm
@@ -25,7 +25,7 @@ class CycleGAN(nn.Module):
         self.create_dirs(self.file_dir)
     
     def train(self, n_epochs, batch_size, lr, criterion_name="L1", lambda_id=0.1, lambda_cycle=10, 
-              checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None):
+              checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None, buffer_capacity=50):
         dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=True)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
@@ -35,6 +35,8 @@ class CycleGAN(nn.Module):
         disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc")
         criterion = self.instantiate_criterion(criterion_name)
         loss_dict = self._initialize_loss_dict(self.checkpoint_name, self.file_dir)
+        buffer_fakeA = self.initialize_image_buffer(buffer_capacity, self.device, self.checkpoint_name, self.file_dir, "fakeA")
+        buffer_fakeB = self.initialize_image_buffer(buffer_capacity, self.device, self.checkpoint_name, self.file_dir, "fakeB")
 
         for epoch in range(self.get_start_epoch(self.checkpoint_name, self.file_dir), 
                            self.get_start_epoch(self.checkpoint_name, self.file_dir) + n_epochs):
@@ -43,10 +45,13 @@ class CycleGAN(nn.Module):
                 realB = realB.to(self.device)
                 fakeB = self.gen_AB(realA)
                 fakeA = self.gen_BA(realB)
+                buffer_fakeA.update(fakeA)
+                buffer_fakeB.update(fakeB)
 
                 # update discriminator
                 disc_optimizer.zero_grad()
-                disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, fakeA, fakeB, criterion, loss_dict)
+                disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, 
+                                               buffer_fakeA.get_tensor(), buffer_fakeB.get_tensor(), criterion, loss_dict)
                 disc_loss.backward()
                 disc_optimizer.step()
 
@@ -64,8 +69,8 @@ class CycleGAN(nn.Module):
             self._save_loss_figure(loss_dict, self.dataset_name, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
-                                     gen_scheduler, disc_scheduler, epoch, batch_size, self.dataset_name, loss_dict, 
-                                     self.device, self.file_dir, checkpoint_save_dir)
+                                     gen_scheduler, disc_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, 
+                                     self.dataset_name, loss_dict, self.device, self.file_dir, checkpoint_save_dir)
 
 
     def generate(self, gen_name="AB", use_train_set=False):
@@ -234,8 +239,8 @@ class CycleGAN(nn.Module):
         return DataLoader(dataset, batch_size, shuffle=shuffle, drop_last=drop_last)
     
     def save_checkpoint(self, gen_AB, gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
-                        gen_scheduler, disc_scheduler, epoch, batch_size, dataset_name, loss_dict, device, 
-                        file_dir, save_dir=None):
+                        gen_scheduler, disc_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, dataset_name, 
+                        loss_dict, device, file_dir, save_dir=None):
         """Saves checkpoint for given variables"""
         checkpoint = {
             "gen_AB_state_dict": gen_AB.state_dict(),
@@ -246,6 +251,8 @@ class CycleGAN(nn.Module):
             "disc_optimizer_state_dict": disc_optimizer.state_dict(),
             "gen_scheduler_state_dict": gen_scheduler.state_dict(),
             "disc_scheduler_state_dict": disc_scheduler.state_dict(),
+            "buffer_fakeA_state_dict": buffer_fakeA.state_dict(),
+            "buffer_fakeB_state_dict": buffer_fakeB.state_dict(),
             "epoch": epoch,
             "batch_size": batch_size,
             "dataset_name": dataset_name,
@@ -336,6 +343,14 @@ class CycleGAN(nn.Module):
         """Initializes weights of model m with normal distribution"""
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
             nn.init.normal_(m.weight, mean, std)
+
+    def initialize_image_buffer(self, buffer_capacity, device, checkpoint_name, file_dir, choice="fakeA"):
+        """Returns an initialized instance of ImageBuffer"""
+        image_buffer = ImageBuffer(buffer_capacity, device)
+        if checkpoint_name:
+            checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), torch.device("cpu"))
+            image_buffer.load_state_dict(checkpoint[f"buffer_{choice}_state_dict"])
+        return image_buffer
 
 if __name__ == "__main__":
     checkpoint_name = "horse2zebra_checkpoint_0.pth"
