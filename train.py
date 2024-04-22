@@ -19,6 +19,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cycle_gan = CycleGAN(args.checkpoint_name, args.dataset_name, args.device)
-    cycle_gan.train(args.n_epochs, args.batch_size, args.lr, args.lambda_id, 
+    cycle_gan.train(args.n_epochs, args.batch_size, args.lr, "L1", "L1", "mse", args.lambda_id, 
                     args.lambda_cycle, args.checkpoint_save_dir, args.checkpoint_save_freq, args.image_save_dir)
 
