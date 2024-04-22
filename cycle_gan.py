@@ -31,6 +31,8 @@ class CycleGAN(nn.Module):
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
         disc_optimizer = self.initialize_disc_optimizer(disc_A, disc_B, lr, self.checkpoint_name, self.file_dir, self.device)
+        gen_scheduler = self.initialize_scheduler(gen_optimizer, self.checkpoint_name, self.file_dir, self.device, "gen")
+        disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc")
         criterion = self.instantiate_criterion(criterion_name)
         loss_dict = self._initialize_loss_dict(self.checkpoint_name, self.file_dir)
 
@@ -51,17 +53,19 @@ class CycleGAN(nn.Module):
                 # update generator
                 gen_optimizer.zero_grad()
                 gen_loss = self.get_gen_loss(self.gen_AB, self.gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB,
-                                             criterion, criterion, criterion, lambda_id, lambda_cycle, loss_dict)
+                                            criterion, criterion, criterion, lambda_id, lambda_cycle, loss_dict)
                 gen_loss.backward()
                 gen_optimizer.step()
+            gen_scheduler.step()
+            disc_scheduler.step()
             self._average_temp_loss(loss_dict)
             print(f"Epoch: {epoch}, Discriminator loss: {loss_dict['Discriminator'][-1]}, Generator loss: {loss_dict['Generator'][-1]}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir, image_save_dir)
             self._save_loss_figure(loss_dict, self.dataset_name, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
                 self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
-                                     epoch, batch_size, self.dataset_name, loss_dict, self.device, 
-                                     self.file_dir, checkpoint_save_dir)
+                                     gen_scheduler, disc_scheduler, epoch, batch_size, self.dataset_name, loss_dict, 
+                                     self.device, self.file_dir, checkpoint_save_dir)
 
 
     def generate(self, gen_name="AB", use_train_set=False):
@@ -229,16 +233,19 @@ class CycleGAN(nn.Module):
                                     torch.device("cpu"))["batch_size"]
         return DataLoader(dataset, batch_size, shuffle=shuffle, drop_last=drop_last)
     
-    def save_checkpoint(self, gen_AB, gen_BA, gen_optimzer, disc_A, disc_B, disc_optimizer,
-                        epoch, batch_size, dataset_name, loss_dict, device, file_dir, save_dir=None):
+    def save_checkpoint(self, gen_AB, gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
+                        gen_scheduler, disc_scheduler, epoch, batch_size, dataset_name, loss_dict, device, 
+                        file_dir, save_dir=None):
         """Saves checkpoint for given variables"""
         checkpoint = {
             "gen_AB_state_dict": gen_AB.state_dict(),
             "gen_BA_state_dict": gen_BA.state_dict(),
-            "gen_optimizer_state_dict": gen_optimzer.state_dict(),
+            "gen_optimizer_state_dict": gen_optimizer.state_dict(),
             "disc_A_state_dict": disc_A.state_dict(),
             "disc_B_state_dict": disc_B.state_dict(),
             "disc_optimizer_state_dict": disc_optimizer.state_dict(),
+            "gen_scheduler_state_dict": gen_scheduler.state_dict(),
+            "disc_scheduler_state_dict": disc_scheduler.state_dict(),
             "epoch": epoch,
             "batch_size": batch_size,
             "dataset_name": dataset_name,
@@ -309,6 +316,21 @@ class CycleGAN(nn.Module):
         fig.savefig(os.path.join(file_dir, "loss-figures", f"{dataset_name}_loss_fig.png"))
         plt.close(fig)
 
+    def initialize_scheduler(self, optimizer, checkpoint_name, file_dir, device, choice="gen", start_epoch=100, end_epoch=200):
+        """Returns scheduler (of either generator or discriminator) for given choice"""
+        scheduler = optim.lr_scheduler.LambdaLR(optimizer, self._get_lr_lambda(start_epoch, end_epoch))
+        if checkpoint_name:
+            try:
+                checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), device)
+                scheduler.load_state_dict(checkpoint[choice + "_scheduler_state_dict"])
+            except KeyError:
+                # Handle unavailable scheduler checkpoint
+                scheduler.last_epoch = self.get_start_epoch(checkpoint_name, file_dir)
+        return scheduler
+
+    def _get_lr_lambda(self, start_epoch=100, end_epoch=200):
+        """Returns lr_lambda for LambdaLr scheduler"""
+        return lambda epoch, s_epoch=start_epoch, e_epoch=end_epoch: (e_epoch-epoch)/(e_epoch - s_epoch) if epoch > s_epoch else 1
 
 
 if __name__ == "__main__":
