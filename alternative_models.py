@@ -78,7 +78,7 @@ class Discriminator(nn.Module):
         layers = []
 
         # Define initial conv block
-        layers.append(nn.Sequential(nn.Conv2d(in_channels, hidden_channels, 1), nn.GELU()))
+        layers.append(nn.Sequential(nn.Conv2d(in_channels, hidden_channels, 7, 1, 3, padding_mode="reflect"), nn.GELU()))
 
         # Define down blocks
         for i in range(n_downs):
