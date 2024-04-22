@@ -95,7 +95,7 @@ class CycleGAN(nn.Module):
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
-            gen = Generator(3, 64).to(device)
+            gen = Generator(3, 64).apply(self._initialize_weights).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -105,7 +105,7 @@ class CycleGAN(nn.Module):
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
         if dataset_name == "horse2zebra":
-            disc = Discriminator(3, 64).to(device)
+            disc = Discriminator(3, 64).apply(self._initialize_weights).to(device)
         
         if checkpoint_name:
             checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
@@ -332,6 +332,10 @@ class CycleGAN(nn.Module):
         """Returns lr_lambda for LambdaLr scheduler"""
         return lambda epoch, s_epoch=start_epoch, e_epoch=end_epoch: (e_epoch-epoch)/(e_epoch - s_epoch) if epoch > s_epoch else 1
 
+    def _initialize_weights(self, m, mean=0, std=0.02):
+        """Initializes weights of model m with normal distribution"""
+        if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+            nn.init.normal_(m.weight, mean, std)
 
 if __name__ == "__main__":
     checkpoint_name = "horse2zebra_checkpoint_0.pth"
