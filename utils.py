@@ -70,7 +70,7 @@ def download_dataset(dataset_name, root, base_folder, url=None):
 
 class ImageBuffer(object):
     """Keeps images in a specified-size buffer"""
-    def __init__(self, buffer_capacity, device):
+    def __init__(self, buffer_capacity=None, device=None):
         self.buffer = []
         self.buffer_capacity = buffer_capacity
         self.device = device
@@ -89,6 +89,16 @@ class ImageBuffer(object):
     def size(self):
         """Returns the size of the buffer"""
         return len(self.buffer)
+    
+    def state_dict(self):
+        """Returns state dictionary of image-buffer class"""
+        return {"buffer": self.buffer, "buffer_capacity": self.buffer_capacity, "device": device}
+    
+    def load_state_dict(self, state_dict):
+        """Loads given buffer state dictionary"""
+        self.buffer = state_dict["buffer"]
+        self.buffer_capacity = state_dict["buffer_capacity"]
+        self.device = state_dict["device"]
 
 
 
