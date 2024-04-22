@@ -48,7 +48,7 @@ class Generator(nn.Module):
         layers = []
         
         # Define initial conv layer
-        layers.append(nn.Sequential(nn.Conv2d(in_channels, hidden_channels, 1), nn.GELU()))
+        layers.append(nn.Sequential(nn.Conv2d(in_channels, hidden_channels, 7, 1, 3, padding_mode="reflect"), nn.GELU()))
 
         # Define down blocks
         for i in range(n_downs):
@@ -63,7 +63,7 @@ class Generator(nn.Module):
             layers.append(UpBlock(2**i*hidden_channels, 2**(i-1)*hidden_channels))
         
         # Define final conv layer
-        layers.append(nn.Sequential(nn.Conv2d(hidden_channels, in_channels, 1)))
+        layers.append(nn.Sequential(nn.Conv2d(hidden_channels, in_channels, 7, 1, 3, padding_mode="reflect"), nn.Tanh()))
 
         # Sequentialize model
         self.model = nn.Sequential(*layers)
