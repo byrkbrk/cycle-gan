@@ -350,7 +350,7 @@ class CycleGAN(nn.Module):
         """Returns an initialized instance of ImageBuffer"""
         image_buffer = ImageBuffer(buffer_capacity, device)
         if checkpoint_name:
-            checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), torch.device("cpu"))
+            checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), device)
             image_buffer.load_state_dict(checkpoint[f"buffer_{choice}_state_dict"])
         return image_buffer
 
