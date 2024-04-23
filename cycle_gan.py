@@ -30,13 +30,9 @@ class CycleGAN(nn.Module):
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
-        #disc_optimizer = self.initialize_disc_optimizer(disc_A, disc_B, lr, self.checkpoint_name, self.file_dir, self.device)
-        disc_A_optimizer = self.initialize_disc_X_optimizer(disc_A, lr, self.checkpoint_name, self.file_dir, self.device, "disc_A")
-        disc_B_optimizer = self.initialize_disc_X_optimizer(disc_B, lr, self.checkpoint_name, self.file_dir, self.device, "disc_B")
+        disc_optimizer = self.initialize_disc_optimizer(disc_A, disc_B, lr, self.checkpoint_name, self.file_dir, self.device)
         gen_scheduler = self.initialize_scheduler(gen_optimizer, self.checkpoint_name, self.file_dir, self.device, "gen")
-        #disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc")
-        disc_A_scheduler = self.initialize_scheduler(disc_A_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc_A")
-        disc_B_scheduler = self.initialize_scheduler(disc_B_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc_B")
+        disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc")
         id_criterion = self.instantiate_criterion(id_criterion_name)
         cycle_criterion = self.instantiate_criterion(cycle_criterion_name)
         adv_criterion = self.instantiate_criterion(adv_criterion_name)
@@ -54,19 +50,12 @@ class CycleGAN(nn.Module):
                 buffer_fakeA.update(fakeA)
                 buffer_fakeB.update(fakeB)
 
-                # update discriminator-A
-                disc_A_optimizer.zero_grad()
-                # disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, 
-                #                                buffer_fakeA.get_tensor(), buffer_fakeB.get_tensor(), adv_criterion, loss_dict)
-                disc_A_loss = self.get_disc_X_loss(disc_A, realA, buffer_fakeA.get_tensor(), adv_criterion, loss_dict, "Discriminator-A")
-                disc_A_loss.backward()
-                disc_A_optimizer.step()
-
-                # update discriminator-B
-                disc_B_optimizer.zero_grad()
-                disc_B_loss = self.get_disc_X_loss(disc_B, realB, buffer_fakeB.get_tensor(), adv_criterion, loss_dict, "Discriminator-B")
-                disc_B_loss.backward()
-                disc_B_optimizer.step()
+                # update discriminator
+                disc_optimizer.zero_grad()
+                disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, 
+                                               buffer_fakeA.get_tensor(), buffer_fakeB.get_tensor(), adv_criterion, loss_dict)
+                disc_loss.backward()
+                disc_optimizer.step()
 
                 # update generator
                 gen_optimizer.zero_grad()
@@ -75,16 +64,14 @@ class CycleGAN(nn.Module):
                 gen_loss.backward()
                 gen_optimizer.step()
             gen_scheduler.step()
-            disc_A_scheduler.step()
-            disc_B_scheduler.step()
-            #disc_scheduler.step()
+            disc_scheduler.step()
             self._average_temp_loss(loss_dict)
             print(f"Epoch: {epoch}, Discriminator loss: {loss_dict['Discriminator'][-1]}, Generator loss: {loss_dict['Generator'][-1]}")
             self.save_tensor_images(realA, fakeA, realB, fakeB, epoch, self.file_dir, image_save_dir)
             self._save_loss_figure(loss_dict, self.dataset_name, self.file_dir)
             if (epoch + 1) % checkpoint_save_freq == 0:
-                self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_A_optimizer, disc_B_optimizer,
-                                     gen_scheduler, disc_A_scheduler, disc_B_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, 
+                self.save_checkpoint(self.gen_AB, self.gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
+                                     gen_scheduler, disc_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, 
                                      self.dataset_name, loss_dict, self.device, self.file_dir, checkpoint_save_dir)
 
 
@@ -166,14 +153,6 @@ class CycleGAN(nn.Module):
             disc_optimizer.load_state_dict(checkpoint["disc_optimizer_state_dict"])
         return disc_optimizer
     
-    def initialize_disc_X_optimizer(self, disc_X, lr, checkpoint_name, file_dir, device, choice="disc_A", betas=(0.5, 0.999)):
-        """Initializes discriminator X optimizer"""
-        disc_optimizer = optim.Adam(disc_X.parameters(), lr, betas=betas)
-        if checkpoint_name:
-            checkpoint = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name), map_location=device)
-            disc_optimizer.load_state_dict(checkpoint[f"{choice}_optimizer_state_dict"])
-        return disc_optimizer
-    
     def initialize_gen_optimizer(self, gen_AB, gen_BA, lr, checkpoint_name, file_dir, device):
         """Initializes generator optimizer"""
         gen_optimizer = optim.Adam(list(gen_AB.parameters()) + list(gen_BA.parameters()), lr)
@@ -192,14 +171,11 @@ class CycleGAN(nn.Module):
             loss_dict["temp-" + key].append(loss_val)
         return disc_loss
     
-    def get_disc_X_loss(self, disc_X, realX, fakeX, criterion, loss_dict, disc_name):
+    def get_disc_X_loss(self, disc_X, realX, fakeX, criterion):
         """Returns discriminator X loss"""
         pred_real = disc_X(realX)
         pred_fake = disc_X(fakeX.detach())
-        loss = 1/2*(criterion(pred_real, torch.ones_like(pred_real)) + criterion(pred_fake, torch.zeros_like(pred_fake)))
-        loss_dict["temp-"+disc_name].append(loss.item())
-        loss_dict["temp-Discriminator"].append(loss.item()) # add also Discriminator (sum of DiscA and DiscB)
-        return loss
+        return 1/2*(criterion(pred_real, torch.ones_like(pred_real)) + criterion(pred_fake, torch.zeros_like(pred_fake)))
     
     def get_gen_loss(self, gen_AB, gen_BA, disc_A, disc_B, realA, realB, fakeA, fakeB, 
                      id_criterion, cycle_criterion, adv_criterion, lambda_id, lambda_cycle, loss_dict):
@@ -264,8 +240,8 @@ class CycleGAN(nn.Module):
                                     torch.device("cpu"))["batch_size"]
         return DataLoader(dataset, batch_size, shuffle=shuffle, drop_last=drop_last)
     
-    def save_checkpoint(self, gen_AB, gen_BA, gen_optimizer, disc_A, disc_B, disc_A_optimizer, disc_B_optimizer,
-                        gen_scheduler, disc_A_scheduler, disc_B_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, dataset_name, 
+    def save_checkpoint(self, gen_AB, gen_BA, gen_optimizer, disc_A, disc_B, disc_optimizer,
+                        gen_scheduler, disc_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, dataset_name, 
                         loss_dict, device, file_dir, save_dir=None):
         """Saves checkpoint for given variables"""
         checkpoint = {
@@ -274,11 +250,9 @@ class CycleGAN(nn.Module):
             "gen_optimizer_state_dict": gen_optimizer.state_dict(),
             "disc_A_state_dict": disc_A.state_dict(),
             "disc_B_state_dict": disc_B.state_dict(),
-            "disc_A_optimizer_state_dict": disc_A_optimizer.state_dict(),
-            "disc_B_optimizer_state_dict": disc_B_optimizer.state_dict(),
+            "disc_optimizer_state_dict": disc_optimizer.state_dict(),
             "gen_scheduler_state_dict": gen_scheduler.state_dict(),
-            "disc_A_scheduler_state_dict": disc_A_scheduler.state_dict(),
-            "disc_B_scheduler_state_dict": disc_B_scheduler.state_dict(),
+            "disc_scheduler_state_dict": disc_scheduler.state_dict(),
             "buffer_fakeA_state_dict": buffer_fakeA.state_dict(),
             "buffer_fakeB_state_dict": buffer_fakeB.state_dict(),
             "epoch": epoch,
