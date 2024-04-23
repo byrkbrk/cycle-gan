@@ -70,21 +70,20 @@ def download_dataset(dataset_name, root, base_folder, url=None):
 
 class ImageBuffer(object):
     """Keeps images in a specified-size buffer"""
-    def __init__(self, buffer_capacity=None, device=None):
+    def __init__(self, buffer_capacity=None):
         self.buffer = []
         self.buffer_capacity = buffer_capacity
-        self.device = device
     
     def update(self, image):
         """Adds (or replaces) given image to buffer"""
         if self.size() < self.buffer_capacity:
-            self.buffer.append(image.detach().cpu())
+            self.buffer.append(image.detach())
         else:
-            self.buffer[torch.randint(self.buffer_capacity, (1,))] = image.detach().cpu()
+            self.buffer[torch.randint(self.buffer_capacity, (1,))] = image.detach()
     
     def get_tensor(self):
         """Returns buffer as a tensor"""
-        return torch.cat(self.buffer).to(self.device)
+        return torch.cat(self.buffer)
     
     def size(self):
         """Returns the size of the buffer"""
@@ -92,13 +91,12 @@ class ImageBuffer(object):
     
     def state_dict(self):
         """Returns state dictionary of image-buffer class"""
-        return {"buffer": self.buffer, "buffer_capacity": self.buffer_capacity, "device": device}
+        return {"buffer": self.buffer, "buffer_capacity": self.buffer_capacity}
     
     def load_state_dict(self, state_dict):
         """Loads given buffer state dictionary"""
         self.buffer = state_dict["buffer"]
         self.buffer_capacity = state_dict["buffer_capacity"]
-        self.device = state_dict["device"]
 
 
 
