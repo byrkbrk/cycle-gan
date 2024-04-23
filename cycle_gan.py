@@ -217,13 +217,13 @@ class CycleGAN(nn.Module):
         elif criterion_name == "mse":
             return nn.MSELoss()
     
-    def save_tensor_images(self, realA, fakeA, realB, fakeB, epoch, file_dir, image_save_dir):
+    def save_tensor_images(self, realA, fakeA, realB, fakeB, epoch, file_dir, image_save_dir, inference_transform=lambda x: (x+1)/2):
         """Save given tensor images into saved-images directory"""
         if image_save_dir:
             fp = os.path.join(image_save_dir, f"realA_fakeB_realB_fakeA_{epoch}.jpeg")
         else:
             fp = os.path.join(file_dir, "saved-images", f"realA_fakeB_realB_fakeA_{epoch}.jpeg")
-        save_image(torch.cat([realA, fakeB, realB, fakeA], axis=0), fp, nrow=len(realA))
+        save_image(torch.cat([inference_transform(image) for image in [realA, fakeB, realB, fakeA]]), fp, nrow=len(realA))
 
     def create_dirs(self, file_dir):
         """Create directories used in training and inferencing"""
