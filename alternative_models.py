@@ -17,10 +17,10 @@ class ResidualBlock(nn.Module):
     
 
 class DownBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, kernel_size=3):
         super(DownBlock, self).__init__()
         self.model = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 3, 2, 1, padding_mode="reflect"),
+            nn.Conv2d(in_channels, out_channels, kernel_size, 2, 1, padding_mode="reflect"),
             nn.InstanceNorm2d(out_channels),
             nn.GELU()
         )
@@ -82,10 +82,10 @@ class Discriminator(nn.Module):
 
         # Define down blocks
         for i in range(n_downs):
-            layers.append(DownBlock(2**i*hidden_channels, 2**(i+1)*hidden_channels))
+            layers.append(DownBlock(2**i*hidden_channels, 2**(i+1)*hidden_channels, 4))
         
         # Define final conv block
-        layers.append(nn.Conv2d(2**n_downs*hidden_channels, 1, 1))
+        layers.append(nn.Conv2d(2**n_downs*hidden_channels, 1, 4, 1, 1))
 
         # Sequentialize model
         self.model = nn.Sequential(*layers)
@@ -117,7 +117,8 @@ if __name__ == "__main__":
     print(gen(x).shape)
 
     print("Disc")
-    disc = Discriminator(3, 16).to(device)
+    x = torch.randn(4, 3, 256, 256, device=device)
+    disc = Discriminator(3, 64).to(device)
     print(x.shape)
     print(disc(x).shape)
 
