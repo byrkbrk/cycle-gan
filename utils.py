@@ -74,17 +74,22 @@ class ImageBuffer(object):
         self.buffer = []
         self.buffer_capacity = buffer_capacity
     
-    def update(self, image):
-        """Adds (or replaces) given image to buffer"""
+    def get_tensor(self, images):
+        """Returns images from buffer"""
+        return torch.cat([self._push_and_pop(image.detach()[None]) for image in images])
+
+    def _push_and_pop(self, image):
+        """Pushes (if available) into buffer and returns (if possible) given image"""
+        if self.buffer_capacity == 0: return image
+
         if self.size() < self.buffer_capacity:
-            self.buffer.append(image.detach())
+            self.buffer.append(image)
         else:
-            self.buffer[torch.randint(self.buffer_capacity, (1,))] = image.detach()
-    
-    def get_tensor(self):
-        """Returns buffer as a tensor"""
-        return torch.cat(self.buffer)
-    
+            if torch.rand(1) > 0.5:
+                idx = torch.randint(self.buffer_capacity, (1, ))
+                image, self.buffer[idx] = self.buffer[idx], image
+        return image
+
     def size(self):
         """Returns the size of the buffer"""
         return len(self.buffer)
@@ -125,12 +130,13 @@ if __name__ == "__main__":
     # file_dir = os.path.dirname(__file__)
     # download_dataset(dataset_name, file_dir)
 
-    buffer_capacity = 2
+    buffer_capacity = 7
     device = torch.device("mps")
-    image_buffer = ImageBuffer(buffer_capacity, device)
-
+    image_buffer = ImageBuffer(buffer_capacity)
+    
+    images = torch.rand(3, 3, 5, 5).to(device)
     for _ in range(5):
-        image_buffer.update(torch.rand(1, 3, 5, 5).to(device))
+        print(image_buffer.get_tensor(images).shape)
         print(image_buffer.size())
     
-    print(image_buffer.get_tensor())
+    #print(image_buffer.get_tensor().shape)
