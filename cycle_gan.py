@@ -47,13 +47,11 @@ class CycleGAN(nn.Module):
                 realB = realB.to(self.device)
                 fakeB = self.gen_AB(realA)
                 fakeA = self.gen_BA(realB)
-                buffer_fakeA.update(fakeA)
-                buffer_fakeB.update(fakeB)
 
                 # update discriminator
                 disc_optimizer.zero_grad()
                 disc_loss = self.get_disc_loss(disc_A, disc_B, realA, realB, 
-                                               buffer_fakeA.get_tensor(), buffer_fakeB.get_tensor(), adv_criterion, loss_dict)
+                                               buffer_fakeA.get_tensor(fakeA), buffer_fakeB.get_tensor(fakeB), adv_criterion, loss_dict)
                 disc_loss.backward()
                 disc_optimizer.step()
 
@@ -143,7 +141,7 @@ class CycleGAN(nn.Module):
             return transforms.Compose([transforms.ToTensor(), 
                                        transforms.RandomHorizontalFlip(),
                                        lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
-                                       lambda x: 2*x - 1]) # pixels to [-0.5, 0.5]
+                                       lambda x: 2*x - 1]) # pixels to [-1, 1]
 
     def initialize_disc_optimizer(self, disc_A, disc_B, lr, checkpoint_name, file_dir, device):
         """Initializes discriminator optimizer"""
