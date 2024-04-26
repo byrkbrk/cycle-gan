@@ -31,8 +31,10 @@ class CycleGAN(nn.Module):
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
         disc_optimizer = self.initialize_disc_optimizer(disc_A, disc_B, lr, self.checkpoint_name, self.file_dir, self.device)
-        gen_scheduler = self.initialize_scheduler(gen_optimizer, self.checkpoint_name, self.file_dir, self.device, "gen")
-        disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc")
+        gen_scheduler = self.initialize_scheduler(gen_optimizer, self.checkpoint_name, self.file_dir, self.device, "gen",
+                                                  end_epoch=self.get_start_epoch(self.checkpoint_name, self.file_dir) + n_epochs)
+        disc_scheduler = self.initialize_scheduler(disc_optimizer, self.checkpoint_name, self.file_dir, self.device, "disc",
+                                                   end_epoch=self.get_start_epoch(self.checkpoint_name, self.file_dir) + n_epochs)
         id_criterion = self.instantiate_criterion(id_criterion_name)
         cycle_criterion = self.instantiate_criterion(cycle_criterion_name)
         adv_criterion = self.instantiate_criterion(adv_criterion_name)
@@ -96,7 +98,7 @@ class CycleGAN(nn.Module):
                 map_location=torch.device("cpu"))["dataset_name"]
         assert dataset_name in {"horse2zebra"}, "Unknown dataset name"
         return dataset_name
-    
+
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
         if dataset_name == "horse2zebra":
@@ -323,8 +325,9 @@ class CycleGAN(nn.Module):
         fig.savefig(os.path.join(file_dir, "loss-figures", f"{dataset_name}_loss_fig.png"))
         plt.close(fig)
 
-    def initialize_scheduler(self, optimizer, checkpoint_name, file_dir, device, choice="gen", start_epoch=100, end_epoch=200):
+    def initialize_scheduler(self, optimizer, checkpoint_name, file_dir, device, choice="gen", start_epoch=100, end_epoch=200, end_epoch_treshold=200):
         """Returns scheduler (of either generator or discriminator) for given choice"""
+        if end_epoch < end_epoch_treshold: end_epoch=end_epoch_treshold # handle when to train more than 200 epochs
         scheduler = optim.lr_scheduler.LambdaLR(optimizer, self._get_lr_lambda(start_epoch, end_epoch))
         if checkpoint_name:
             try:
@@ -353,6 +356,7 @@ class CycleGAN(nn.Module):
         return image_buffer
 
 if __name__ == "__main__":
-    checkpoint_name = "horse2zebra_checkpoint_0.pth"
-    cycle_gan = CycleGAN(checkpoint_name, "horse2zebra")
-    cycle_gan.train(5, 2, 2e-4)
+    checkpoint_name = "horse2zebra_checkpoint_199_corrected_buffer_gelu.pth"
+    cycle_gan = CycleGAN(checkpoint_name)
+    loss_dict = cycle_gan._initialize_loss_dict(cycle_gan.checkpoint_name, cycle_gan.file_dir)
+    cycle_gan._save_loss_figure(loss_dict, cycle_gan.dataset_name, cycle_gan.file_dir)
