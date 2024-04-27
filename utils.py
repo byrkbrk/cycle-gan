@@ -14,11 +14,13 @@ class Horse2zebraDataset(Dataset):
         if train:
             self.dataset_pathA = os.path.join(dataset_dir, "trainA")
             self.dataset_pathB = os.path.join(dataset_dir, "trainB")
+            self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in os.listdir(self.dataset_pathA)]
+            self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in os.listdir(self.dataset_pathB)]
         else:
             self.dataset_pathA = os.path.join(dataset_dir, "testA")
             self.dataset_pathB = os.path.join(dataset_dir, "testB")
-        self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in os.listdir(self.dataset_pathA)]
-        self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in os.listdir(self.dataset_pathB)]
+            self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in self.sort_files(os.listdir(self.dataset_pathA))]
+            self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in self.sort_files(os.listdir(self.dataset_pathB))]
         self.transform = transform
 
     def __getitem__(self, index):
@@ -34,6 +36,11 @@ class Horse2zebraDataset(Dataset):
     
     def read_image(self, img_path):
         return Image.open(img_path)
+    
+    def sort_files(self, files):
+        """Sorts based on file indices for a given list of files"""
+        f = lambda x: int(os.path.splitext(x)[0].split("_")[-1])
+        return sorted(files, key=f)
 
 
 def unzip_dataset(dataset_name, file_dir):
