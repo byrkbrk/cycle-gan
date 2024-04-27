@@ -4,7 +4,7 @@ from torch import optim
 from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
-from alternative_models import Generator, Discriminator
+from models import Generator, Discriminator
 from utils import Horse2zebraDataset, ImageBuffer
 import os
 from zipfile import ZipFile
