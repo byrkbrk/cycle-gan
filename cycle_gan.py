@@ -16,15 +16,19 @@ import matplotlib.pyplot as plt
 class CycleGAN(nn.Module):
     def __init__(self, checkpoint_name=None, dataset_name=None, device=None, allow_checkpoint_download=False):
         super(CycleGAN, self).__init__()
-        self.checkpoint_name = checkpoint_name
         self.file_dir = os.path.dirname(__file__)
+        self.create_dirs(self.file_dir)
+
+        if allow_checkpoint_download:
+            if dataset_name is None:
+                raise TypeError("The 'dataset_name' argument must be provided when 'allow_checkpoint_download' is True")
+            download_checkpoint(dataset_name, self.file_dir, "checkpoints")
+        
+        self.checkpoint_name = checkpoint_name
         self.dataset_name = self.get_dataset_name(dataset_name, checkpoint_name, self.file_dir)
         self.device = self.initialize_device(device)
         self.gen_AB = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_AB")
         self.gen_BA = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_BA")
-        self.create_dirs(self.file_dir)
-        if allow_checkpoint_download:
-            download_checkpoint(self.dataset_name, self.file_dir, "checkpoints")
     
     def train(self, n_epochs, batch_size, lr, id_criterion_name="L1", cycle_criterion_name="L1", adv_criterion_name="mse", lambda_id=0.1, lambda_cycle=10, 
               checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None, buffer_capacity=50):
