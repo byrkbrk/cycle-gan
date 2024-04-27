@@ -315,11 +315,14 @@ class CycleGAN(nn.Module):
     
     def _save_loss_figure(self, loss_dict, dataset_name, file_dir):
         """Creates and saves loss figure for given loss dict"""
-        line_types = ['b-', 'g--', 'r:', 'c-.', 'm-', 'y--', 'k:', 'm-.', 'bx-', 'ro-.']
+        colors = ['mediumseagreen', 'g', 'r', 'c', 'm', 'y', 'k', 'm', 'b', 'r']
+        linestyles = ['-', '--', ':', '-.', '-', '--', ':', '-.', '-', '-.']
+        markers = [None, None, None, None, None, None, None, None, "x", "o"]
         labels = [label for label in loss_dict.keys() if "temp-" not in label]
+
         fig, ax = plt.subplots()
-        for label, line_type in zip(labels, line_types):
-            ax.plot(range(len(loss_dict[label])), loss_dict[label], line_type, label=label)
+        for label, color, linestyle, marker in zip(labels, colors, linestyles, markers):
+            ax.plot(range(len(loss_dict[label])), loss_dict[label], color=color, label=label, linestyle=linestyle, marker=marker)
         ax.legend()
         ax.set_xlabel("epoch")
         ax.set_ylabel("loss")
@@ -358,7 +361,7 @@ class CycleGAN(nn.Module):
 
 if __name__ == "__main__":
     #checkpoint_name = "horse2zebra_checkpoint_199_corrected_buffer_gelu.pth"
-    dataset_name = "horse2zebra"
-    cycle_gan = CycleGAN(dataset_name=dataset_name)
-    transform = cycle_gan.get_transform(cycle_gan.dataset_name, False)
-    print(transform)
+    checkpoint_name = "horse2zebra_checkpoint_219.pth"
+    loss_dict = torch.load(os.path.join(os.path.dirname(__file__), "checkpoints", checkpoint_name), torch.device("cpu"))["loss_dict"]
+    cycle_gan = CycleGAN(checkpoint_name)
+    cycle_gan._save_loss_figure(loss_dict, cycle_gan.dataset_name, cycle_gan.file_dir)
