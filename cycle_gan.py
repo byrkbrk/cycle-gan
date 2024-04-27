@@ -26,7 +26,7 @@ class CycleGAN(nn.Module):
     
     def train(self, n_epochs, batch_size, lr, id_criterion_name="L1", cycle_criterion_name="L1", adv_criterion_name="mse", lambda_id=0.1, lambda_cycle=10, 
               checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None, buffer_capacity=50):
-        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.checkpoint_name, self.file_dir, use_train_set=True)
+        dataloader = self.instantiate_dataloader(batch_size, self.dataset_name, self.get_transform(self.dataset_name), self.checkpoint_name, self.file_dir, use_train_set=True)
         disc_A = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_A")
         disc_B = self.initialize_discriminator(self.dataset_name, self.checkpoint_name, self.device, self.file_dir, "disc_B")
         gen_optimizer = self.initialize_gen_optimizer(self.gen_AB, self.gen_BA, lr, self.checkpoint_name, self.file_dir, self.device)
@@ -74,7 +74,7 @@ class CycleGAN(nn.Module):
                                      gen_scheduler, disc_scheduler, buffer_fakeA, buffer_fakeB, epoch, batch_size, 
                                      self.dataset_name, loss_dict, self.device, self.file_dir, checkpoint_save_dir)
 
-
+    @torch.no_grad()
     def generate(self, gen_name="AB", use_train_set=False):
         """Generates images for given generator name, using test (or train) set"""
         save_dir = os.path.join(self.file_dir, "generated-images", f"{self.dataset_name}-{gen_name}")
@@ -84,10 +84,11 @@ class CycleGAN(nn.Module):
         else: gen = self.gen_BA
         gen.eval()
         inference_transform = lambda x: (x + 1)/2
-        for i, (realA, realB) in enumerate(self.instantiate_dataloader(1, self.dataset_name, None, self.file_dir, use_train_set, False, False)):
+        for i, (realA, realB) in enumerate(self.instantiate_dataloader(1, self.dataset_name, self.get_transform(self.dataset_name, False), 
+                                                                       None, self.file_dir, use_train_set, False, False)):
             if gen_name == "AB": image = realA.to(self.device)
             else: image = realB.to(self.device)
-            save_image(torch.cat([inference_transform(image), inference_transform(gen(image))]), 
+            save_image(torch.cat([inference_transform(img) for img in [image, gen(image)]]), 
                        os.path.join(save_dir, f"image_{gen_name}_{i}.jpeg"))
 
     def get_dataset_name(self, dataset_name, checkpoint_name, file_dir):
@@ -137,13 +138,13 @@ class CycleGAN(nn.Module):
                     with ZipFile(os.path.join(file_dir, "datasets", file_name), "r") as zip_file:
                         zip_file.extractall(extract_to)
 
-    def get_transform(self, dataset_name):
+    def get_transform(self, dataset_name, use_train_transform=True):
         """Returns the transform object for a given dataset name"""
         if dataset_name == "horse2zebra":
             return transforms.Compose([transforms.ToTensor(), 
-                                       transforms.RandomHorizontalFlip(),
-                                       lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
-                                       lambda x: 2*x - 1]) # pixels to [-1, 1]
+                                        transforms.RandomHorizontalFlip() if use_train_transform else lambda x: x,
+                                        lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
+                                        lambda x: 2*x - 1]) # pixels to [-1, 1]
 
     def initialize_disc_optimizer(self, disc_A, disc_B, lr, checkpoint_name, file_dir, device):
         """Initializes discriminator optimizer"""
@@ -231,9 +232,9 @@ class CycleGAN(nn.Module):
         for dir_name in dir_names:
             os.makedirs(os.path.join(file_dir, dir_name), exist_ok=True)
 
-    def instantiate_dataloader(self, batch_size, dataset_name, checkpoint_name, file_dir, use_train_set=True, shuffle=True, drop_last=True):
+    def instantiate_dataloader(self, batch_size, dataset_name, transform, checkpoint_name, file_dir, use_train_set=True, shuffle=True, drop_last=True):
         """Returns dataloader for given dataset name"""
-        dataset = self.instantiate_dataset(dataset_name, self.get_transform(dataset_name), file_dir, use_train_set)
+        dataset = self.instantiate_dataset(dataset_name, transform, file_dir, use_train_set)
 
         if checkpoint_name:
             batch_size = torch.load(os.path.join(file_dir, "checkpoints", checkpoint_name),
@@ -356,7 +357,8 @@ class CycleGAN(nn.Module):
         return image_buffer
 
 if __name__ == "__main__":
-    checkpoint_name = "horse2zebra_checkpoint_199_corrected_buffer_gelu.pth"
-    cycle_gan = CycleGAN(checkpoint_name)
-    loss_dict = cycle_gan._initialize_loss_dict(cycle_gan.checkpoint_name, cycle_gan.file_dir)
-    cycle_gan._save_loss_figure(loss_dict, cycle_gan.dataset_name, cycle_gan.file_dir)
+    #checkpoint_name = "horse2zebra_checkpoint_199_corrected_buffer_gelu.pth"
+    dataset_name = "horse2zebra"
+    cycle_gan = CycleGAN(dataset_name=dataset_name)
+    transform = cycle_gan.get_transform(cycle_gan.dataset_name, False)
+    print(transform)
