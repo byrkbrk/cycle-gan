@@ -6,6 +6,7 @@ import os
 from zipfile import ZipFile
 import requests
 from torchvision.utils import save_image
+import gdown
 
 
 
@@ -109,6 +110,14 @@ class ImageBuffer(object):
         """Loads given buffer state dictionary"""
         self.buffer = state_dict["buffer"]
         self.buffer_capacity = state_dict["buffer_capacity"]
+
+def download_checkpoint(dataset_name, root, base_folder="checkpoints"):
+    """Downloads pretrained checkpoint for given dataset name"""
+    file_name_id = {"horse2zebra": ["pretrained_horse2zebra_checkpoint_219.pth", 
+                                    "10ZlokluOgzIfaeSN_CDJ277fJYAoIOXj"]}
+    file_name, file_id = file_name_id[dataset_name]
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output=os.path.join(root, base_folder, file_name), quiet=False)
 
 
 
