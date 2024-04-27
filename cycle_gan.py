@@ -5,7 +5,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 from models import Generator, Discriminator
-from utils import Horse2zebraDataset, ImageBuffer
+from utils import Horse2zebraDataset, ImageBuffer, download_checkpoint
 import os
 from zipfile import ZipFile
 from tqdm import tqdm
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 class CycleGAN(nn.Module):
-    def __init__(self, checkpoint_name=None, dataset_name=None, device=None):
+    def __init__(self, checkpoint_name=None, dataset_name=None, device=None, allow_checkpoint_download=False):
         super(CycleGAN, self).__init__()
         self.checkpoint_name = checkpoint_name
         self.file_dir = os.path.dirname(__file__)
@@ -23,6 +23,8 @@ class CycleGAN(nn.Module):
         self.gen_AB = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_AB")
         self.gen_BA = self.initialize_generator(self.dataset_name, checkpoint_name, self.device, self.file_dir, "gen_BA")
         self.create_dirs(self.file_dir)
+        if allow_checkpoint_download:
+            download_checkpoint(self.dataset_name, self.file_dir, "checkpoints")
     
     def train(self, n_epochs, batch_size, lr, id_criterion_name="L1", cycle_criterion_name="L1", adv_criterion_name="mse", lambda_id=0.1, lambda_cycle=10, 
               checkpoint_save_dir=None, checkpoint_save_freq=1, image_save_dir=None, buffer_capacity=50):
