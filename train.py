@@ -6,7 +6,7 @@ from cycle_gan import CycleGAN
 if __name__ == "__main__":
     parser = ArgumentParser(description="Train Cycle GAN")
     parser.add_argument("--dataset-name", type=str, default="horse2zebra", help="Name of the dataset to train")
-    parser.add_argument("--n-epochs", type=int, default=100, help="Number of epochs for training")
+    parser.add_argument("--n-epochs", type=int, default=200, help="Number of epochs for training")
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=2e-4, help="Learning rate for training")
     parser.add_argument("--checkpoint-name", type=str, default=None, help="Checkpoint name for pre-training")
