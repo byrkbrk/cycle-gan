@@ -16,9 +16,10 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint-save-freq", type=int, default=5, help="Frequency for checkpoint saving")
     parser.add_argument("--checkpoint-save-dir", type=str, default=None, help="Directory to save checkpoints")
     parser.add_argument("--image-save-dir", type=str, default=None, help="Directory to save images during training")
+    parser.add_argument("--allow-checkpoint-download", type=bool, default=False, help="Downloads pretrained checkpoint if True")
     args = parser.parse_args()
 
-    cycle_gan = CycleGAN(args.checkpoint_name, args.dataset_name, args.device)
+    cycle_gan = CycleGAN(args.checkpoint_name, args.dataset_name, args.device, args.allow_checkpoint_download)
     cycle_gan.train(args.n_epochs, args.batch_size, args.lr, "L1", "L1", "mse", args.lambda_id, 
                     args.lambda_cycle, args.checkpoint_save_dir, args.checkpoint_save_freq, args.image_save_dir)
 
