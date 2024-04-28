@@ -1,0 +1,14 @@
+name: cycle-gan-env
+
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pytorch
+  - torchvision
+  - matplotlib
+  - tqdm
+  - gdown
