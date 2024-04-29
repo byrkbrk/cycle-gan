@@ -1,7 +1,8 @@
 # Cycle GAN
 
 ## Introduction
-We implement a simple form of Cycle GAN described in [Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks](https://arxiv.org/abs/1703.10593), in PyTorch. While preparing, we inspired by the repositories [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) and [PyTorch-CycleGAN](https://github.com/aitorzip/PyTorch-CycleGAN). We trained the model on dataset [Horse2zebra](https://www.kaggle.com/datasets/balraj98/horse2zebra-dataset), which is availabe in the directory `datasets`.
+We implement a simple form of Cycle GAN described in the article [Unpaired Image-to-Image Translation](https://arxiv.org/abs/1703.10593), in PyTorch. While preparing, we inspired by the repositories [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) and [PyTorch-CycleGAN](https://github.com/aitorzip/PyTorch-CycleGAN), 
+and the course [*Apply GANs*](https://www.coursera.org/learn/apply-generative-adversarial-networks-gans). We trained the model on dataset [Horse2zebra](https://www.kaggle.com/datasets/balraj98/horse2zebra-dataset), which is availabe in the directory `datasets`.
 
 ## Setting up the environment
 
