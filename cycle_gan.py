@@ -131,18 +131,6 @@ class CycleGAN(nn.Module):
         if dataset_name == "horse2zebra":
             return Horse2zebraDataset(os.path.join(file_dir, "datasets"), transform, train)
 
-    def unzip_dataset(self, dataset_name, file_dir):
-        """Unzip dataset for given dataset name"""
-        if dataset_name == "horse2zebra":
-            extract_to = os.path.join(file_dir, "datasets", dataset_name)
-            if os.path.exists(extract_to):
-                print(f"Directory {extract_to} already exists. No operation done")
-            else:
-                os.mkdir(extract_to)
-                for file_name in ["horse2zebraA.zip", "horse2zebraB.zip"]:
-                    with ZipFile(os.path.join(file_dir, "datasets", file_name), "r") as zip_file:
-                        zip_file.extractall(extract_to)
-
     def get_transform(self, dataset_name, use_train_transform=True):
         """Returns the transform object for a given dataset name"""
         if dataset_name == "horse2zebra":
