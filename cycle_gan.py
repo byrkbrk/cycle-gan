@@ -129,8 +129,7 @@ class CycleGAN(nn.Module):
     def instantiate_dataset(self, dataset_name, transform, file_dir, train=True):
         """Instantiate dataset for given dataset name"""
         if dataset_name == "horse2zebra":
-            self.unzip_dataset(dataset_name, file_dir)
-            return Horse2zebraDataset(os.path.join(file_dir, "datasets", dataset_name), transform, train)
+            return Horse2zebraDataset(os.path.join(file_dir, "datasets"), transform, train)
 
     def unzip_dataset(self, dataset_name, file_dir):
         """Unzip dataset for given dataset name"""
