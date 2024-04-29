@@ -11,15 +11,18 @@ import gdown
 
 
 class Horse2zebraDataset(Dataset):
-    def __init__(self, dataset_dir, transform, train):
+    """Horse2zebra dataset"""
+    base_folder = dataset_name = "horse2zebra"
+    def __init__(self, root, transform, train):
+        unzip_dataset(self.dataset_name, self.base_folder, root)
         if train:
-            self.dataset_pathA = os.path.join(dataset_dir, "trainA")
-            self.dataset_pathB = os.path.join(dataset_dir, "trainB")
+            self.dataset_pathA = os.path.join(root, self.base_folder, "trainA")
+            self.dataset_pathB = os.path.join(root, self.base_folder, "trainB")
             self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in os.listdir(self.dataset_pathA)]
             self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in os.listdir(self.dataset_pathB)]
         else:
-            self.dataset_pathA = os.path.join(dataset_dir, "testA")
-            self.dataset_pathB = os.path.join(dataset_dir, "testB")
+            self.dataset_pathA = os.path.join(root, self.base_folder, "testA")
+            self.dataset_pathB = os.path.join(root, self.base_folder, "testB")
             self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in self.sort_files(os.listdir(self.dataset_pathA))]
             self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in self.sort_files(os.listdir(self.dataset_pathB))]
         self.transform = transform
@@ -44,16 +47,16 @@ class Horse2zebraDataset(Dataset):
         return sorted(files, key=f)
 
 
-def unzip_dataset(dataset_name, file_dir):
+def unzip_dataset(dataset_name, base_folder, root):
         """Unzip dataset for given dataset name"""
         if dataset_name == "horse2zebra":
-            extract_to = os.path.join(file_dir, "datasets", dataset_name)
+            extract_to = os.path.join(root, base_folder)
             if os.path.exists(extract_to):
                 print(f"Directory {extract_to} already exists. No operation done")
             else:
                 os.mkdir(extract_to)
                 for file_name in ["horse2zebraA.zip", "horse2zebraB.zip"]:
-                    with ZipFile(os.path.join(file_dir, "datasets", file_name), "r") as zip_file:
+                    with ZipFile(os.path.join(root, file_name), "r") as zip_file:
                         zip_file.extractall(extract_to)
 
 
@@ -146,13 +149,4 @@ if __name__ == "__main__":
     # file_dir = os.path.dirname(__file__)
     # download_dataset(dataset_name, file_dir)
 
-    buffer_capacity = 7
-    device = torch.device("mps")
-    image_buffer = ImageBuffer(buffer_capacity)
-    
-    images = torch.rand(3, 3, 5, 5).to(device)
-    for _ in range(5):
-        print(image_buffer.get_tensor(images).shape)
-        print(image_buffer.size())
-    
-    #print(image_buffer.get_tensor().shape)
+    dataset = Horse2zebraDataset("datasets", lambda x: x, True)
