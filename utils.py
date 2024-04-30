@@ -118,7 +118,6 @@ def unzip_dataset(dataset_name, base_folder, root):
                     zip_file.extractall(extract_to)
 
 
-
 def download_dataset(dataset_name, root, url=None):
     """Downloads dataset into root/ directory"""
     if url is None:
@@ -131,6 +130,7 @@ def download_dataset(dataset_name, root, url=None):
     
     response = requests.get(url)
     if response.status_code == 200:
+        print(f"Downloading {url}...")
         with open(file_path, "wb") as file:
             file.write(response.content)
         print(f"File {file_path} downloaded successfully.")
@@ -180,7 +180,6 @@ def download_checkpoint(dataset_name, root, base_folder="checkpoints"):
     file_name, file_id = file_name_id[dataset_name]
     url = f"https://drive.google.com/uc?id={file_id}"
     gdown.download(url, output=os.path.join(root, base_folder, file_name), quiet=False)
-
 
 
 if __name__ == "__main__":
