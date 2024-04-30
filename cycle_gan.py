@@ -5,7 +5,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 from models import Generator, Discriminator
-from utils import Horse2zebraDataset, ImageBuffer, download_checkpoint
+from utils import Horse2zebraDataset, Monet2photoDataset, ImageBuffer, download_checkpoint
 import os
 from zipfile import ZipFile
 from tqdm import tqdm
@@ -104,12 +104,12 @@ class CycleGAN(nn.Module):
             dataset_name = torch.load(
                 os.path.join(file_dir, "checkpoints", checkpoint_name), 
                 map_location=torch.device("cpu"))["dataset_name"]
-        assert dataset_name in {"horse2zebra"}, "Unknown dataset name"
+        assert dataset_name in {"horse2zebra", "monet2photo"}, "Unknown dataset name"
         return dataset_name
 
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
         """Returns initialized generator for given inputs"""
-        if dataset_name == "horse2zebra":
+        if dataset_name in {"horse2zebra", "monet2photo"}:
             gen = Generator(3, 64).apply(self._initialize_weights).to(device)
         
         if checkpoint_name:
@@ -119,7 +119,7 @@ class CycleGAN(nn.Module):
     
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
-        if dataset_name == "horse2zebra":
+        if dataset_name in {"horse2zebra", "monet2photo"}:
             disc = Discriminator(3, 64).apply(self._initialize_weights).to(device)
         
         if checkpoint_name:
@@ -131,10 +131,12 @@ class CycleGAN(nn.Module):
         """Instantiate dataset for given dataset name"""
         if dataset_name == "horse2zebra":
             return Horse2zebraDataset(os.path.join(file_dir, "datasets"), transform, train)
+        if dataset_name == "monet2photo":
+            return Monet2photoDataset(os.path.join(file_dir, "datasets"), transform, train, download=True)
 
     def get_transform(self, dataset_name, use_train_transform=True):
         """Returns the transform object for a given dataset name"""
-        if dataset_name == "horse2zebra":
+        if dataset_name in {"horse2zebra", "monet2photo"}:
             return transforms.Compose([transforms.ToTensor(), 
                                         transforms.RandomHorizontalFlip() if use_train_transform else lambda x: x,
                                         lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
