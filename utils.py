@@ -128,9 +128,9 @@ def download_dataset(dataset_name, root, url=None):
         print(f"File {file_path} already exists. No operation done!")
         return
     
+    print(f"Sending request to url {url}...")
     response = requests.get(url)
     if response.status_code == 200:
-        print(f"Downloading {url}...")
         with open(file_path, "wb") as file:
             file.write(response.content)
         print(f"File {file_path} downloaded successfully.")
