@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 from models import Generator, Discriminator
 from utils import Horse2zebraDataset, Monet2photoDataset, ImageBuffer, download_checkpoint
 import os
-from zipfile import ZipFile
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
