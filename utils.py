@@ -180,32 +180,3 @@ def download_checkpoint(dataset_name, root, base_folder="checkpoints"):
     file_name, file_id = file_name_id[dataset_name]
     url = f"https://drive.google.com/uc?id={file_id}"
     gdown.download(url, output=os.path.join(root, base_folder, file_name), quiet=False)
-
-
-if __name__ == "__main__":
-    # unzip_dataset("horse2zebra", os.path.dirname(__file__))
-    # dataset_dir = os.path.join(os.path.dirname(__file__), "datasets", "horse2zebra")
-    # dataset = Horse2zebraDataset(dataset_dir, transforms.ToTensor(), True)
-
-    # itr = iter(dataset)
-    # shapes = set()
-    # for i in range(3000):
-    #     a, b = next(itr)
-    #     print(i, a.shape, b.shape)
-    #     shapes.add(a.shape)
-    #     shapes.add(b.shape)
-    #     if b.shape[0] == 1:
-    #         print(b.shape)
-    #         save_image(b, "single_channel.jpeg")
-    #         c = b.repeat(3, 1, 1)
-    #         save_image(c, "repeated_channels.jpeg")
-    #         break
-        
-
-    # # print(shapes)
-    # dataset_name = "facades"
-    # file_dir = os.path.dirname(__file__)
-    # download_dataset(dataset_name, file_dir)
-
-    dataset = Horse2zebraDataset("datasets", lambda x: x, True)
-    dataset = Monet2photoDataset("datasets", lambda x: x, True, False)
