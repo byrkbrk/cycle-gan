@@ -101,7 +101,7 @@ class Latex2handwrittenDataset(Dataset):
     """Horse2zebra dataset"""
     base_folder = dataset_name = "latex2handwritten"
     def __init__(self, root, transform, train):
-        unzip_dataset(self.dataset_name, self.base_folder, root)
+        unzip_dataset(__class__.dataset_name, __class__.base_folder, root)
         if train:
             self.dataset_pathA = os.path.join(root, self.base_folder, "trainA")
             self.dataset_pathB = os.path.join(root, self.base_folder, "trainB")
@@ -130,8 +130,8 @@ class Latex2handwrittenDataset(Dataset):
     
     def sort_files(self, files):
         """Sorts based on file indices for a given list of files"""
-        f = lambda x: int(os.path.splitext(x)[0].split("_")[-1])
-        return sorted(files, key=f)
+        #f = lambda x: int(os.path.splitext(x)[0].split("_")[-1])
+        return sorted(files)
 
 
 def unzip_dataset(dataset_name, base_folder, root):
