@@ -5,7 +5,7 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 from models import Generator, Discriminator
-from utils import Horse2zebraDataset, Monet2photoDataset, ImageBuffer, download_checkpoint
+from utils import Horse2zebraDataset, Monet2photoDataset, Latex2handwrittenDataset, ImageBuffer, download_checkpoint
 import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -132,6 +132,8 @@ class CycleGAN(nn.Module):
             return Horse2zebraDataset(os.path.join(file_dir, "datasets"), transform, train)
         if dataset_name == "monet2photo":
             return Monet2photoDataset(os.path.join(file_dir, "datasets"), transform, train, download=True)
+        if dataset_name == "latex2handwritten":
+            return Latex2handwrittenDataset(os.path.join(file_dir, "datasets"), transform, train)
 
     def get_transform(self, dataset_name, use_train_transform=True):
         """Returns the transform object for a given dataset name"""
