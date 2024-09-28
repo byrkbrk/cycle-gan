@@ -98,9 +98,10 @@ class Monet2photoDataset(Dataset):
         
 
 class Latex2handwrittenDataset(Dataset):
-    """Horse2zebra dataset"""
+    """Latex2handwritten dataset"""
     base_folder = dataset_name = "latex2handwritten"
     def __init__(self, root, transform, train):
+        self.download_dataset(__class__.dataset_name, root, __class__.base_folder)
         unzip_dataset(__class__.dataset_name, __class__.base_folder, root)
         if train:
             self.dataset_pathA = os.path.join(root, self.base_folder, "trainA")
@@ -132,6 +133,18 @@ class Latex2handwrittenDataset(Dataset):
         """Sorts based on file indices for a given list of files"""
         #f = lambda x: int(os.path.splitext(x)[0].split("_")[-1])
         return sorted(files)
+    
+    def download_dataset(self, dataset_name, root, base_folder="datasets"):
+        """Downloads dataset for given dataset name"""
+        file_name_id = {"latex2handwritten": ["latex2handwritten.zip", 
+                                        "1yx9cCjdKTednizft1piqMchsYZW4E5yp"]}
+        file_name, file_id = file_name_id[dataset_name]
+        if os.path.exists(os.path.join(root, base_folder, file_name)):
+            print(f"File exists! No operation done: {os.path.join(root, base_folder, file_name)}")
+            return
+        else:
+            url = f"https://drive.google.com/uc?id={file_id}"
+            gdown.download(url, output=os.path.join(root, base_folder, file_name), quiet=False)
 
 
 def unzip_dataset(dataset_name, base_folder, root):
