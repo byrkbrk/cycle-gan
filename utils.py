@@ -94,8 +94,45 @@ class Monet2photoDataset(Dataset):
         extract_to = os.path.join(root, "")
         for file_name in file_names:
             with ZipFile(os.path.join(root, file_name), "r") as zip_file:
-                    zip_file.extractall(extract_to)    
+                    zip_file.extractall(extract_to)
         
+
+class Latex2handwrittenDataset(Dataset):
+    """Horse2zebra dataset"""
+    base_folder = dataset_name = "latex2handwritten"
+    def __init__(self, root, transform, train):
+        unzip_dataset(self.dataset_name, self.base_folder, root)
+        if train:
+            self.dataset_pathA = os.path.join(root, self.base_folder, "trainA")
+            self.dataset_pathB = os.path.join(root, self.base_folder, "trainB")
+            self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in os.listdir(self.dataset_pathA)]
+            self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in os.listdir(self.dataset_pathB)]
+        else:
+            self.dataset_pathA = os.path.join(root, self.base_folder, "testA")
+            self.dataset_pathB = os.path.join(root, self.base_folder, "testB")
+            self.image_pathsA = [os.path.join(self.dataset_pathA, file) for file in self.sort_files(os.listdir(self.dataset_pathA))]
+            self.image_pathsB = [os.path.join(self.dataset_pathB, file) for file in self.sort_files(os.listdir(self.dataset_pathB))]
+        self.transform = transform
+
+    def __getitem__(self, index):
+        if index < len(self.image_pathsA): imageA = self.read_image(self.image_pathsA[index])
+        else: imageA = self.read_image(self.image_pathsA[torch.randint(len(self.image_pathsA), (1, ))])
+
+        if index < len(self.image_pathsB): imageB = self.read_image(self.image_pathsB[index])
+        else: imageB = self.read_image(self.image_pathsB[torch.randint(len(self.image_pathsB), (1, ))])
+        return self.transform(imageA), self.transform(imageB)
+
+    def __len__(self):
+        return max(len(self.image_pathsA), len(self.image_pathsB))
+    
+    def read_image(self, img_path):
+        return Image.open(img_path)
+    
+    def sort_files(self, files):
+        """Sorts based on file indices for a given list of files"""
+        f = lambda x: int(os.path.splitext(x)[0].split("_")[-1])
+        return sorted(files, key=f)
+
 
 def unzip_dataset(dataset_name, base_folder, root):
         """Unzip dataset for given dataset name"""
@@ -103,6 +140,8 @@ def unzip_dataset(dataset_name, base_folder, root):
             file_names =  ["horse2zebraA.zip", "horse2zebraB.zip"]
         elif dataset_name == "monet2photo":
             file_names = ["monet2photo.zip"]
+        elif dataset_name == "latex2handwritten":
+            file_names = ["latex2handwritten.zip"]
         else:
             raise ValueError(f"Undefined dataset name: {dataset_name}")
         
