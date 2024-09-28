@@ -103,7 +103,7 @@ class CycleGAN(nn.Module):
             dataset_name = torch.load(
                 os.path.join(file_dir, "checkpoints", checkpoint_name), 
                 map_location=torch.device("cpu"))["dataset_name"]
-        assert dataset_name in {"horse2zebra", "monet2photo"}, "Unknown dataset name"
+        assert dataset_name in {"horse2zebra", "monet2photo", "latex2handwritten"}, "Unknown dataset name"
         return dataset_name
 
     def initialize_generator(self, dataset_name, checkpoint_name, device, file_dir, gen_name):
