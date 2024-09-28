@@ -118,7 +118,7 @@ class CycleGAN(nn.Module):
     
     def initialize_discriminator(self, dataset_name, checkpoint_name, device, file_dir, disc_name):
         """Returns initialized discriminator for given inputs"""
-        if dataset_name in {"horse2zebra", "monet2photo"}:
+        if dataset_name in {"horse2zebra", "monet2photo", "latex2handwritten"}:
             disc = Discriminator(3, 64).apply(self._initialize_weights).to(device)
         
         if checkpoint_name:
