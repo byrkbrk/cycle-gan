@@ -140,6 +140,9 @@ class CycleGAN(nn.Module):
                                         transforms.RandomHorizontalFlip() if use_train_transform else lambda x: x,
                                         lambda x: x.repeat(3, 1, 1) if x.shape[0]==1 else x, # handle 1-channel images
                                         lambda x: 2*x - 1]) # pixels to [-1, 1]
+        elif dataset_name in {"latex2handwritten"}:
+            return transforms.Compose([transforms.ToTensor(), 
+                                       lambda x: 2*x - 1]) # pixels to [-1, 1]
 
     def initialize_disc_optimizer(self, disc_A, disc_B, lr, checkpoint_name, file_dir, device):
         """Initializes discriminator optimizer"""
