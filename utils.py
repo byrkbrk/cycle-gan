@@ -136,8 +136,10 @@ class Latex2handwrittenDataset(Dataset):
     
     def download_dataset(self, dataset_name, root):
         """Downloads dataset for given dataset name"""
+        # file_name_id = {"latex2handwritten": ["latex2handwritten.zip", 
+        #                                 "1yx9cCjdKTednizft1piqMchsYZW4E5yp"]}
         file_name_id = {"latex2handwritten": ["latex2handwritten.zip", 
-                                        "1yx9cCjdKTednizft1piqMchsYZW4E5yp"]}
+                                        "1IdyDJJ8HTUGj_8ZipeKHhng3tQyQ1Dj_"]}
         file_name, file_id = file_name_id[dataset_name]
         if os.path.exists(os.path.join(root, file_name)):
             print(f"File exists! No operation done: {os.path.join(root, file_name)}")
@@ -232,3 +234,7 @@ def download_checkpoint(dataset_name, root, base_folder="checkpoints"):
     file_name, file_id = file_name_id[dataset_name]
     url = f"https://drive.google.com/uc?id={file_id}"
     gdown.download(url, output=os.path.join(root, base_folder, file_name), quiet=False)
+
+
+if __name__ == "__main__":
+    latex2handwritten = Latex2handwrittenDataset("datasets", lambda x: x, True)
